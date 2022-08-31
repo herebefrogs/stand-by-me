@@ -1,5 +1,5 @@
 import { isKeyDown, anyKeyDown, isKeyUp } from './inputs/keyboard';
-import { isPointerDown, isPointerUp, pointerDirection } from './inputs/pointer';
+import { isPointerDown, isPointerUp, canvasPointerPosition } from './inputs/pointer';
 import { isMobile } from './mobile';
 import { checkMonetization, isMonetizationEnabled } from './monetization';
 import { share } from './share';
@@ -26,8 +26,8 @@ let screen = TITLE_SCREEN;
 const RADIUS_ONE_AT_45_DEG = Math.cos(Math.PI / 4);
 const TIME_TO_FULL_SPEED = 150;                // in millis, duration till going full speed in any direction
 
-let countdown; // in seconds
 let hero;
+let crosshair;  // coordinate in viewport space (add viewportOffset to convert to map space)
 let entities;
 
 let speak;
@@ -54,20 +54,10 @@ let viewportOffsetY = 0;
 
 const ATLAS = {
   hero: {
-    move: [
-      { x: 0, y: 0, w: 16, h: 18 },
-      { x: 16, y: 0, w: 16, h: 18 },
-      { x: 32, y: 0, w: 16, h: 18 },
-      { x: 48, y: 0, w: 16, h: 18 },
-      { x: 64, y: 0, w: 16, h: 18 },
-    ],
-    speed: 100,
+    speed: 75,
   },
   foe: {
-    'move': [
-      { x: 0, y: 0, w: 16, h: 18 },
-    ],
-    speed: 0,
+    speed: 100,
   },
 };
 const FRAME_DURATION = 0.1; // duration of 1 animation frame, in seconds
@@ -91,22 +81,15 @@ function startGame() {
   // setRandSeed(getRandSeed());
   // if (isMonetizationEnabled()) { unlockExtraContent() }
   konamiIndex = 0;
-  countdown = 60;
   viewportOffsetX = viewportOffsetY = 0;
   hero = createEntity('hero', VIEWPORT.width / 2, VIEWPORT.height / 2);
+  crosshair =
+   {
+     view: { x: hero.x, y: hero.y },
+     map: {}
+   }
   entities = [
     hero,
-    createEntity('foe', 10, 10),
-    createEntity('foe', 630 - 16, 10),
-    createEntity('foe', 630 - 16, 470 - 18),
-    createEntity('foe', 300, 200),
-    createEntity('foe', 400, 300),
-    createEntity('foe', 500, 400),
-    createEntity('foe', 10, 470 - 18),
-    createEntity('foe', 100, 100),
-    createEntity('foe', 100, 118),
-    createEntity('foe', 116, 118),
-    createEntity('foe', 116, 100),
   ];
   renderMap();
   screen = GAME_SCREEN;
@@ -228,14 +211,36 @@ function updateCameraWindow() {
   }
 };
 
+function updateEntityViewportPosition(entity) {
+  entity.view.x = Math.round(entity.x - viewportOffsetX);
+  entity.view.y = Math.round(entity.y - viewportOffsetY);
+}
+
+function updateCrosshairMapPosition() {
+  crosshair.x = Math.round(crosshair.view.x + viewportOffsetX);
+  crosshair.y = Math.round(crosshair.view.y + viewportOffsetY);
+}
+
+function velocityForTarget(srcX, srcY, destX, destY) {
+  const hypotenuse = Math.sqrt(Math.pow(destX - srcX, 2) + Math.pow(destY - srcY, 2))
+  const adjacent = destX - srcX;
+  const opposite = destY - srcY;
+  // [
+  //  velX = cos(alpha),
+  //  velY = sin(alpha),
+  //  alpha
+  // ]
+  return [
+    adjacent / hypotenuse,
+    opposite / hypotenuse,
+    Math.atan2(opposite / hypotenuse, adjacent / hypotenuse) + Math.PI/2,
+  ];
+}
+
 function createEntity(type, x = 0, y = 0) {
-  const action = 'move';
-  const sprite = ATLAS[type][action][0];
   return {
-    action,
     frame: 0,
     frameTime: 0,
-    h: sprite.h,
     moveDown: 0,
     moveLeft: 0,
     moveRight: 0,
@@ -244,7 +249,6 @@ function createEntity(type, x = 0, y = 0) {
     moveY: 0,
     speed: ATLAS[type].speed,
     type,
-    w: sprite.w,
     x,
     y,
   };
@@ -252,12 +256,12 @@ function createEntity(type, x = 0, y = 0) {
 
 function updateEntity(entity) {
   // update animation frame
-  entity.frameTime += elapsedTime;
-  if (entity.frameTime > FRAME_DURATION) {
-    entity.frameTime -= FRAME_DURATION;
-    entity.frame += 1;
-    entity.frame %= ATLAS[entity.type][entity.action].length;
-  }
+  // entity.frameTime += elapsedTime;
+  // if (entity.frameTime > FRAME_DURATION) {
+  //   entity.frameTime -= FRAME_DURATION;
+  //   entity.frame += 1;
+  //   entity.frame %= ATLAS[entity.type][entity.action].length;
+  // }
   // update position
   const scale = entity.moveX && entity.moveY ? RADIUS_ONE_AT_45_DEG : 1;
   const distance = entity.speed * elapsedTime * scale;
@@ -276,39 +280,39 @@ function processInputs() {
       }
       break;
     case GAME_SCREEN:
-      if (isPointerDown()) {
-        [hero.moveX, hero.moveY] = pointerDirection();
-      } else {
-        hero.moveLeft = isKeyDown(
-          'ArrowLeft',
-          'KeyA',   // English Keyboard layout
-          'KeyQ'    // French keyboard layout
-        );
-        hero.moveRight = isKeyDown(
-          'ArrowRight',
-          'KeyD'
-        );
-        hero.moveUp = isKeyDown(
-          'ArrowUp',
-          'KeyW',   // English Keyboard layout
-          'KeyZ'    // French keyboard layout
-        );
-        hero.moveDown = isKeyDown(
-          'ArrowDown',
-          'KeyS'
-        );
+      [crosshair.view.x, crosshair.view.y] = canvasPointerPosition();
+      hero.shooting = isPointerDown();
 
-        if (hero.moveLeft || hero.moveRight) {
-          hero.moveX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
-        } else {
-          hero.moveX = 0;
-        }
-        if (hero.moveDown || hero.moveUp) {
-          hero.moveY = (hero.moveUp > hero.moveDown ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveUp, hero.moveDown)) / TIME_TO_FULL_SPEED)
-        } else {
-          hero.moveY = 0;
-        }
+      hero.moveLeft = isKeyDown(
+        'ArrowLeft',
+        'KeyA',   // English Keyboard layout
+        'KeyQ'    // French keyboard layout
+      );
+      hero.moveRight = isKeyDown(
+        'ArrowRight',
+        'KeyD'
+      );
+      hero.moveUp = isKeyDown(
+        'ArrowUp',
+        'KeyW',   // English Keyboard layout
+        'KeyZ'    // French keyboard layout
+      );
+      hero.moveDown = isKeyDown(
+        'ArrowDown',
+        'KeyS'
+      );
+
+      if (hero.moveLeft || hero.moveRight) {
+        hero.moveX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
+      } else {
+        hero.moveX = 0;
       }
+      if (hero.moveDown || hero.moveUp) {
+        hero.moveY = (hero.moveUp > hero.moveDown ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveUp, hero.moveDown)) / TIME_TO_FULL_SPEED)
+      } else {
+        hero.moveY = 0;
+      }
+
       break;
     case END_SCREEN:
       if (isKeyUp('KeyT')) {
@@ -330,10 +334,6 @@ function update() {
 
   switch (screen) {
     case GAME_SCREEN:
-      countdown -= elapsedTime;
-      if (countdown < 0) {
-        screen = END_SCREEN;
-      }
       entities.forEach(updateEntity);
       entities.slice(1).forEach((entity) => {
         const test = testAABBCollision(hero, entity);
@@ -343,6 +343,8 @@ function update() {
       });
       constrainToViewport(hero);
       updateCameraWindow();
+//      entities.forEach(updateEntityViewportPosition);
+      updateCrosshairMapPosition();
       break;
   }
 };
@@ -378,10 +380,8 @@ function render() {
         0, 0, VIEWPORT.width, VIEWPORT.height
       );
       renderText('game screen', CHARSET_SIZE, CHARSET_SIZE);
-      renderCountdown();
-      // uncomment to debug mobile input handlers
-      // renderDebugTouch();
       entities.forEach(entity => renderEntity(entity));
+      renderCrosshair();
       break;
     case END_SCREEN:
       renderText('end screen', CHARSET_SIZE, CHARSET_SIZE);
@@ -392,27 +392,42 @@ function render() {
   blit();
 };
 
-function renderCountdown() {
-  const minutes = Math.floor(Math.ceil(countdown) / 60);
-  const seconds = Math.ceil(countdown) - minutes * 60;
-  renderText(`${minutes}:${seconds <= 9 ? '0' : ''}${seconds}`, VIEWPORT.width - CHARSET_SIZE, CHARSET_SIZE, ALIGN_RIGHT);
+function renderCrosshair() {
+  VIEWPORT_CTX.strokeStyle = '#fff';
+  VIEWPORT_CTX.lineWidth = 2;
+  const width = hero.shooting ? 10 : 12;
+  const offset = hero.shooting ? 5 : 6;
 
-};
+  VIEWPORT_CTX.strokeRect(crosshair.view.x - 1, crosshair.view.y - 1, 2, 2);
+  VIEWPORT_CTX.strokeRect(crosshair.view.x - offset, crosshair.view.y - offset, width, width);
+}
 
 function renderEntity(entity, ctx = VIEWPORT_CTX) {
-  const sprite = ATLAS[entity.type][entity.action][entity.frame];
-  // TODO skip draw if image outside of visible canvas
-  ctx.drawImage(
-    tileset,
-    sprite.x, sprite.y, sprite.w, sprite.h,
-    Math.round(entity.x - viewportOffsetX), Math.round(entity.y - viewportOffsetY), sprite.w, sprite.h
-  );
+  // const sprite = ATLAS[entity.type][entity.action][entity.frame];
+  // // TODO skip draw if image outside of visible canvas
+  // ctx.drawImage(
+  //   tileset,
+  //   sprite.x, sprite.y, sprite.w, sprite.h,
+  //   Math.round(entity.x - viewportOffsetX), Math.round(entity.y - viewportOffsetY), sprite.w, sprite.h
+  // );
+
+  switch (entity.type) {
+    case 'hero':
+      break;
+  }
 };
 
 function renderMap() {
-  MAP_CTX.fillStyle = '#fff';
+  MAP_CTX.fillStyle = '#ccc';
   MAP_CTX.fillRect(0, 0, MAP.width, MAP.height);
-  // TODO cache map by rendering static entities on the MAP canvas
+
+  MAP_CTX.fillStyle ='#777';
+  [0, 2, 4, 6, 8, 10].forEach(x => {
+    [0, 2, 4, 6, 8, 10].forEach(y => {
+      MAP_CTX.fillRect(x*64, y*48, 64, 48);
+      MAP_CTX.fillRect((x+1)*64, (y+1)*48, 64, 48);
+    })
+  })
 };
 
 // LOOP HANDLERS
@@ -442,7 +457,7 @@ function toggleLoop(value) {
 
 // the real "main" of the game
 onload = async (e) => {
-  document.title = 'Game Jam Boilerplate';
+  document.title = 'Stand By Me';
 
   onresize();
   //checkMonetization();

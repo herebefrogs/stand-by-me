@@ -1,7 +1,7 @@
 {
-  "name": "gamejam-boilerplate",
+  "name": "stand-by-me",
   "version": "1.2.0",
-  "description": "Boilerplate for Game Jams like JS13KGames",
+  "description": "entry for JS13KGames 2022 (theme: death)",
   "main": "src/js/game.js",
   "scripts": {
     "clean": "rm -rf dist && mkdir dist",

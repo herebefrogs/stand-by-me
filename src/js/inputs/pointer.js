@@ -128,8 +128,8 @@ export const canvasPointerPosition = () => {
   const canvasY = Math.floor((innerHeight - c.height) / 2);
 
   return [
-    clamp(x - canvasX, 0, c.width),
-    clamp(y - canvasY, 0, c.height)
+    clamp(Math.round((x - canvasX) / c.scaleToFit), 0, c.width),
+    clamp(Math.round((y - canvasY) / c.scaleToFit), 0, c.height)
   ];
 
   const pointerInCanvas = lastEvent.target === c;
