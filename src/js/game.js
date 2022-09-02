@@ -1,5 +1,5 @@
 import { isKeyDown, anyKeyDown, isKeyUp } from './inputs/keyboard';
-import { isPointerDown, isPointerUp, canvasPointerPosition } from './inputs/pointer';
+import { isPointerDown, isPointerUp, pointerCanvasPosition } from './inputs/pointer';
 import { isMobile } from './mobile';
 import { checkMonetization, isMonetizationEnabled } from './monetization';
 import { share } from './share';
@@ -39,22 +39,27 @@ const MAP = c.cloneNode();              // full map rendered off screen
 const MAP_CTX = MAP.getContext('2d');
 MAP.width = 640;                        // map size
 MAP.height = 480;
-const VIEWPORT = c.cloneNode();           // visible portion of map/viewport
-const VIEWPORT_CTX = VIEWPORT.getContext('2d');
-VIEWPORT.width = 320;                      // viewport size
-VIEWPORT.height = 240;
+const BUFFER = c.cloneNode();           // backbuffer
+const BUFFER_CTX = BUFFER.getContext('2d');
+BUFFER.width = 640;                     // backbuffer size, same as map
+BUFFER.height = 480;
 
+let cameraX = 0;                        // camera/viewport position in map
+let cameraY = 0;
+const CAMERA_WIDTH = 320;               // camera/viewport size
+const CAMERA_HEIGHT = 240;
 // camera-window & edge-snapping settings
 const CAMERA_WINDOW_X = 100;
 const CAMERA_WINDOW_Y = 50;
-const CAMERA_WINDOW_WIDTH = VIEWPORT.width - CAMERA_WINDOW_X;
-const CAMERA_WINDOW_HEIGHT = VIEWPORT.height - CAMERA_WINDOW_Y;
-let viewportOffsetX = 0;
-let viewportOffsetY = 0;
+const CAMERA_WINDOW_WIDTH = CAMERA_WIDTH - 2*CAMERA_WINDOW_X;
+const CAMERA_WINDOW_HEIGHT = CAMERA_HEIGHT - 2*CAMERA_WINDOW_Y;
+
 
 const ATLAS = {
   hero: {
     speed: 75,
+    w: 10,
+    h: 10
   },
   foe: {
     speed: 100,
@@ -81,13 +86,9 @@ function startGame() {
   // setRandSeed(getRandSeed());
   // if (isMonetizationEnabled()) { unlockExtraContent() }
   konamiIndex = 0;
-  viewportOffsetX = viewportOffsetY = 0;
-  hero = createEntity('hero', VIEWPORT.width / 2, VIEWPORT.height / 2);
-  crosshair =
-   {
-     view: { x: hero.x, y: hero.y },
-     map: {}
-   }
+  cameraX = cameraY = 0;
+  hero = createEntity('hero', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+  crosshair = { x: hero.x, y: hero.y };
   entities = [
     hero,
   ];
@@ -196,30 +197,26 @@ function constrainToViewport(entity) {
 
 
 function updateCameraWindow() {
+  // TODO try to simplify the formulae below with this variable so it's easier to visualize
+  // const cameraEdgeLeftX = cameraX + CAMERA_WINDOW_X;
+  // const cameraEdgeTopY = cameraY + CAMERA_WINDOW_Y;
+  // const cameraEdgeRightX = cameraEdgeLeftX + CAMERA_WINDOW_WIDTH;
+  // const cameraEdgeBottomY = cameraEdgeTopY + CAMERA_WINDOW_HEIGHT;
+
   // edge snapping
-  if (0 < viewportOffsetX && hero.x < viewportOffsetX + CAMERA_WINDOW_X) {
-    viewportOffsetX = Math.max(0, hero.x - CAMERA_WINDOW_X);
+  if (0 < cameraX && hero.x < cameraX + CAMERA_WINDOW_X) {
+    cameraX = Math.max(0, hero.x - CAMERA_WINDOW_X);
   }
-  else if (viewportOffsetX < MAP.width - VIEWPORT.width && hero.x + hero.w > viewportOffsetX + CAMERA_WINDOW_WIDTH) {
-    viewportOffsetX = Math.min(MAP.width - VIEWPORT.width, hero.x + hero.w - CAMERA_WINDOW_WIDTH);
+  else if (cameraX + CAMERA_WINDOW_X + CAMERA_WINDOW_WIDTH < MAP.width && hero.x + hero.w > cameraX + CAMERA_WINDOW_X + CAMERA_WINDOW_WIDTH) {
+    cameraX = Math.min(MAP.width - CAMERA_WIDTH, hero.x + hero.w - (CAMERA_WINDOW_X + CAMERA_WINDOW_WIDTH));
   }
-  if (0 < viewportOffsetY && hero.y < viewportOffsetY + CAMERA_WINDOW_Y) {
-    viewportOffsetY = Math.max(0, hero.y - CAMERA_WINDOW_Y);
+  if (0 < cameraY && hero.y < cameraY + CAMERA_WINDOW_Y) {
+    cameraY = Math.max(0, hero.y - CAMERA_WINDOW_Y);
   }
-  else if (viewportOffsetY < MAP.height - VIEWPORT.height && hero.y + hero.h > viewportOffsetY + CAMERA_WINDOW_HEIGHT) {
-    viewportOffsetY = Math.min(MAP.height - VIEWPORT.height, hero.y + hero.h - CAMERA_WINDOW_HEIGHT);
+  else if (cameraY + CAMERA_WINDOW_Y + CAMERA_WINDOW_HEIGHT < MAP.height && hero.y + hero.h > cameraY + CAMERA_WINDOW_Y + CAMERA_WINDOW_HEIGHT) {
+    cameraY = Math.min(MAP.height - CAMERA_HEIGHT, hero.y + hero.h - (CAMERA_WINDOW_Y + CAMERA_WINDOW_HEIGHT));
   }
 };
-
-function updateEntityViewportPosition(entity) {
-  entity.view.x = Math.round(entity.x - viewportOffsetX);
-  entity.view.y = Math.round(entity.y - viewportOffsetY);
-}
-
-function updateCrosshairMapPosition() {
-  crosshair.x = Math.round(crosshair.view.x + viewportOffsetX);
-  crosshair.y = Math.round(crosshair.view.y + viewportOffsetY);
-}
 
 function velocityForTarget(srcX, srcY, destX, destY) {
   const hypotenuse = Math.sqrt(Math.pow(destX - srcX, 2) + Math.pow(destY - srcY, 2))
@@ -239,6 +236,7 @@ function velocityForTarget(srcX, srcY, destX, destY) {
 
 function createEntity(type, x = 0, y = 0) {
   return {
+    ...ATLAS[type], // speed, w, h
     frame: 0,
     frameTime: 0,
     moveDown: 0,
@@ -247,7 +245,6 @@ function createEntity(type, x = 0, y = 0) {
     moveUp: 0,
     moveX: 0,
     moveY: 0,
-    speed: ATLAS[type].speed,
     type,
     x,
     y,
@@ -269,6 +266,11 @@ function updateEntity(entity) {
   entity.y += distance * entity.moveY;
 };
 
+const pointerMapPosition = () => {
+  const [x, y] = pointerCanvasPosition(c.width, c.height);
+  return [x*CAMERA_WIDTH/c.width + cameraX, y*CAMERA_HEIGHT/c.height + cameraY].map(Math.round);
+}
+
 function processInputs() {
   switch (screen) {
     case TITLE_SCREEN:
@@ -280,7 +282,7 @@ function processInputs() {
       }
       break;
     case GAME_SCREEN:
-      [crosshair.view.x, crosshair.view.y] = canvasPointerPosition();
+      [crosshair.x, crosshair.y] = pointerMapPosition();
       hero.shooting = isPointerDown();
 
       hero.moveLeft = isKeyDown(
@@ -302,6 +304,7 @@ function processInputs() {
         'KeyS'
       );
 
+      // TODO this is still messy and should be simplified/abstracted
       if (hero.moveLeft || hero.moveRight) {
         hero.moveX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
       } else {
@@ -343,8 +346,6 @@ function update() {
       });
       constrainToViewport(hero);
       updateCameraWindow();
-//      entities.forEach(updateEntityViewportPosition);
-      updateCrosshairMapPosition();
       break;
   }
 };
@@ -352,36 +353,34 @@ function update() {
 // RENDER HANDLERS
 
 function blit() {
-  // copy backbuffer onto visible canvas, scaling it to screen dimensions
+  // copy camera portion of the backbuffer onto visible canvas, scaling it to screen dimensions
   CTX.drawImage(
-    VIEWPORT,
-    0, 0, VIEWPORT.width, VIEWPORT.height,
+    BUFFER,
+    cameraX, cameraY, CAMERA_WIDTH, CAMERA_HEIGHT,
     0, 0, c.width, c.height
   );
 };
 
 function render() {
-  VIEWPORT_CTX.fillStyle = '#fff';
-  VIEWPORT_CTX.fillRect(0, 0, VIEWPORT.width, VIEWPORT.height);
+  BUFFER_CTX.fillStyle = '#fff';
+  BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
 
   switch (screen) {
     case TITLE_SCREEN:
+      // should use Camera Width instead of Buffer now that buffer is the whole map
       renderText('title screen', CHARSET_SIZE, CHARSET_SIZE);
-      renderText(isMobile ? 'tap to start' : 'press any key', VIEWPORT.width / 2, VIEWPORT.height / 2, ALIGN_CENTER);
+      renderText(isMobile ? 'tap to start' : 'press any key', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
       if (konamiIndex === konamiCode.length) {
-        renderText('konami mode on', VIEWPORT.width - CHARSET_SIZE, CHARSET_SIZE, ALIGN_RIGHT);
+        renderText('konami mode on', BUFFER.width - CHARSET_SIZE, CHARSET_SIZE, ALIGN_RIGHT);
       }
       break;
     case GAME_SCREEN:
-      VIEWPORT_CTX.drawImage(
-        MAP,
-        // adjust x/y offset
-        viewportOffsetX, viewportOffsetY, VIEWPORT.width, VIEWPORT.height,
-        0, 0, VIEWPORT.width, VIEWPORT.height
-      );
-      renderText('game screen', CHARSET_SIZE, CHARSET_SIZE);
+      // clear backbuffer by drawing static map elements
+      BUFFER_CTX.drawImage(MAP, 0, 0, BUFFER.width, BUFFER.height);
+      renderText('game screen', cameraX + CHARSET_SIZE, cameraY + CHARSET_SIZE);
       entities.forEach(entity => renderEntity(entity));
       renderCrosshair();
+      // debugCameraWindow();
       break;
     case END_SCREEN:
       renderText('end screen', CHARSET_SIZE, CHARSET_SIZE);
@@ -392,17 +391,23 @@ function render() {
   blit();
 };
 
+function debugCameraWindow() {
+  BUFFER_CTX.strokeStyle = '#d00';
+  BUFFER_CTX.lineWidth = 1;
+  BUFFER_CTX.strokeRect(cameraX + CAMERA_WINDOW_X, cameraY + CAMERA_WINDOW_Y, CAMERA_WINDOW_WIDTH, CAMERA_WINDOW_HEIGHT);
+}
+
 function renderCrosshair() {
-  VIEWPORT_CTX.strokeStyle = '#fff';
-  VIEWPORT_CTX.lineWidth = 2;
+  BUFFER_CTX.strokeStyle = '#fff';
+  BUFFER_CTX.lineWidth = 2;
   const width = hero.shooting ? 10 : 12;
   const offset = hero.shooting ? 5 : 6;
 
-  VIEWPORT_CTX.strokeRect(crosshair.view.x - 1, crosshair.view.y - 1, 2, 2);
-  VIEWPORT_CTX.strokeRect(crosshair.view.x - offset, crosshair.view.y - offset, width, width);
+  BUFFER_CTX.strokeRect(crosshair.x - 1, crosshair.y - 1, 2, 2);
+  BUFFER_CTX.strokeRect(crosshair.x - offset, crosshair.y - offset, width, width);
 }
 
-function renderEntity(entity, ctx = VIEWPORT_CTX) {
+function renderEntity(entity, ctx = BUFFER_CTX) {
   // const sprite = ATLAS[entity.type][entity.action][entity.frame];
   // // TODO skip draw if image outside of visible canvas
   // ctx.drawImage(
@@ -413,6 +418,8 @@ function renderEntity(entity, ctx = VIEWPORT_CTX) {
 
   switch (entity.type) {
     case 'hero':
+      ctx.fillStyle = '#1e1';
+      ctx.fillRect(entity.x, entity.y, entity.w, entity.h);
       break;
   }
 };
@@ -462,7 +469,7 @@ onload = async (e) => {
   onresize();
   //checkMonetization();
 
-  await initCharset(VIEWPORT_CTX);
+  await initCharset(BUFFER_CTX);
   tileset = await loadImg(TILESET);
   // speak = await initSpeech();
 
@@ -471,13 +478,12 @@ onload = async (e) => {
 
 onresize = onrotate = function() {
   // scale canvas to fit screen while maintaining aspect ratio
-  // NOTE: it's dirty to shove the scaling ratio on the canvas, but the pointer events need it for canvas coordinate calculations
-  c.scaleToFit = Math.min(innerWidth / VIEWPORT.width, innerHeight / VIEWPORT.height);
-  c.width = VIEWPORT.width * c.scaleToFit;
-  c.height = VIEWPORT.height * c.scaleToFit;
+  scaleToFit = Math.min(innerWidth / BUFFER.width, innerHeight / BUFFER.height);
+  c.width = BUFFER.width * scaleToFit;
+  c.height = BUFFER.height * scaleToFit;
 
   // disable smoothing on image scaling
-  CTX.imageSmoothingEnabled = MAP_CTX.imageSmoothingEnabled = VIEWPORT_CTX.imageSmoothingEnabled = false;
+  CTX.imageSmoothingEnabled = MAP_CTX.imageSmoothingEnabled = BUFFER_CTX.imageSmoothingEnabled = false;
 
   // fix key events not received on itch.io when game loads in full screen
   window.focus();
