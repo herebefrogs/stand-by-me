@@ -54,6 +54,9 @@ const CAMERA_WINDOW_Y = 50;
 const CAMERA_WINDOW_WIDTH = CAMERA_WIDTH - 2*CAMERA_WINDOW_X;
 const CAMERA_WINDOW_HEIGHT = CAMERA_HEIGHT - 2*CAMERA_WINDOW_Y;
 
+const COLLISION_GROUP_HERO = 1;
+const COLLISION_GROUP_FOES = 2;
+
 
 const ATLAS = {
   hero: {
@@ -93,7 +96,7 @@ function startGame() {
   // if (isMonetizationEnabled()) { unlockExtraContent() }
   konamiIndex = 0;
   cameraX = cameraY = 0;
-  hero = createEntity('hero', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+  hero = createEntity('hero', COLLISION_GROUP_HERO, CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
   crosshair = { x: hero.x, y: hero.y };
   entities = [
     hero,
@@ -110,7 +113,8 @@ function testAABBCollision(entity1, entity2) {
     entity2MaxY: entity2.y + entity2.h,
   };
 
-  test.collide = entity1.x < test.entity2MaxX
+  test.collide = entity1.collisionGroup != entity2.collisionGroup
+    && entity1.x < test.entity2MaxX
     && test.entity1MaxX > entity2.x
     && entity1.y < test.entity2MaxY
     && test.entity1MaxY > entity2.y;
@@ -231,20 +235,21 @@ function velocityForTarget(srcX, srcY, destX, destY) {
   // [
   //  velX = cos(alpha),
   //  velY = sin(alpha),
-  //  alpha (TODO is zero at the top?)
+  //  alpha (0 is east, -PI/2 is north, PI/2 is south, PI is west)
   // ]
   return [
     adjacent / hypotenuse,
     opposite / hypotenuse,
-    Math.atan2(opposite / hypotenuse, adjacent / hypotenuse) + Math.PI/2,
+    Math.atan2(opposite / hypotenuse, adjacent / hypotenuse),
   ];
 }
 
-function createEntity(type, x = 0, y = 0) {
+function createEntity(type, collisionGroup, x = 0, y = 0) {
   return {
     ...ATLAS[type], // speed, w, h
     // frame: 0,
     // frameTime: 0,
+    collisionGroup,
     moveDown: 0,
     moveLeft: 0,
     moveRight: 0,
@@ -340,14 +345,19 @@ function processInputs() {
 }
 
 function fireBullet() {
+  const heroCenterX = hero.x+hero.w/2;
+  const heroCenterY = hero.y+hero.h/2;
+
+  const [velX, velY, angle] = velocityForTarget(heroCenterX, heroCenterY, crosshair.x, crosshair.y);
+  hero.gunAngle = angle;
+
   if (hero.firing) {
     hero.firingTime ||= hero.firingRate;  // fire now if hasn't fired yet
     hero.firingTime += elapsedTime;
     if (hero.firingTime > hero.firingRate) {
       hero.firingTime %= hero.firingRate;
-      const [velX, velY, angle] = velocityForTarget(hero.x, hero.y, crosshair.x, crosshair.y);
       entities.push({
-        ...createEntity('bullet', hero.x, hero.y),
+        ...createEntity('bullet', COLLISION_GROUP_HERO, heroCenterX, heroCenterY),
         angle,
         velX,
         velY,
@@ -445,13 +455,35 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
 
   switch (entity.type) {
     case 'hero':
-      ctx.fillStyle = '#1e1';
-      ctx.fillRect(entity.x, entity.y, entity.w, entity.h);
+      ctx.save();
+      ctx.translate(entity.x, entity.y);
+      if (hero.gunAngle < 0) {
+        // draw gun
+        ctx.save();
+        ctx.translate(entity.w/2, entity.h/2);
+        ctx.rotate(entity.gunAngle + Math.PI/2);
+        ctx.fillStyle = '#ee1';
+        ctx.fillRect(-2, -entity.h, 4, 10);
+        ctx.restore();
+        // draw hero
+        ctx.fillStyle = '#1e1';
+        ctx.fillRect(0, 0, entity.w, entity.h);
+      } else {
+        // draw hero
+        ctx.fillStyle = '#1e1';
+        ctx.fillRect(0, 0, entity.w, entity.h);
+        // draw gun
+        ctx.translate(entity.w/2, entity.h/2);
+        ctx.rotate(entity.gunAngle + Math.PI/2);
+        ctx.fillStyle = '#ee1';
+        ctx.fillRect(-2, -entity.h, 4, 10);
+      }
+      ctx.restore();
       break;
     case 'bullet':
       ctx.save();
       ctx.translate(entity.x, entity.y);
-      ctx.rotate(entity.angle);
+      ctx.rotate(entity.angle + Math.PI/2);
       ctx.fillStyle = '#e1e';
       ctx.fillRect(0, 0, entity.w, entity.h);
       ctx.restore();
