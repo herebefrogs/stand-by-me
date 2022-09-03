@@ -244,6 +244,13 @@ function velocityForTarget(srcX, srcY, destX, destY) {
   ];
 }
 
+function positionOnCircle(centerX, centerY, radius, angle) {
+  return [
+    centerX + radius * Math.cos(angle),
+    centerY + radius * Math.sin(angle)
+  ];
+}
+
 function createEntity(type, collisionGroup, x = 0, y = 0) {
   return {
     ...ATLAS[type], // speed, w, h
@@ -356,8 +363,9 @@ function fireBullet() {
     hero.firingTime += elapsedTime;
     if (hero.firingTime > hero.firingRate) {
       hero.firingTime %= hero.firingRate;
+      const [x, y] = positionOnCircle(heroCenterX, heroCenterY, 20, angle)
       entities.push({
-        ...createEntity('bullet', COLLISION_GROUP_HERO, heroCenterX, heroCenterY),
+        ...createEntity('bullet', COLLISION_GROUP_HERO, x, y),
         angle,
         velX,
         velY,
