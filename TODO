@@ -1,4 +1,97 @@
-- add CCapture.js for recording in-progress movies during development
+Stand by me features:
+=====================
+- hero firing
+  - gun orientation
+  - gun sprite
+    - still
+    - firing
+  - gun sound
+  - bullet creation / motion
+  - bullet collision / removal
+  - bullet collition sound
+  - bullet sprite
+- hero rendering
+  - sprites
+    - still
+    - moving 
+  - orientation (facing same as gun, not facing motion)
+  - animation (play forward if gun orientation same as motion, play backward if opposite)
+- enemy
+  - spawn by waves
+  - navigation (hero or central core)
+  - attack
+  - death
+  - sprites
+    - moving
+    - attacking
+    - dying / dead
+  - animation
+  - sound
+    - attack
+    - dying
+- AI blast wave
+  - AI sprite circling player
+  - blast wave rendering
+  - blast wave collision / enemy death
+  - AI damage
+  - sound
+- level
+  - central core
+  - walls
+  - sprites
+    - central core
+    - walls
+    - ground
+  - level design (and format)
+- UI
+  - AI portrait sprite
+    - cheery 100%
+    - neutral 75%
+    - concerned 50%
+    - afraid 25%
+    - dead
+  - hero portrait sprite?
+  - text zone
+  - AI chat
+    - key to pass text (or text clear after a bit)
+    - level information (protect central core from infestation)
+    - wave information  (infestation detected east/north/... zone 1/2...)
+    - kill cheer (yeah!)
+    - AI/hero health status (outch that one hurt! I/you don't feel/look so good... what's happening to me/you? I don't want [you] to die!)
+    - lays of ancient rome quote (how can one die better than facing fearful odds?... title screen or dialog?)
+  - central core health
+- loose/win condition
+    central core destroyed
+    AI dead?
+    player dead (coil mode)
+- title screen
+  - stand by me
+  - start
+  - mortal mode toggle (enabled if coil is active)
+  - minimal instructions?
+  - jerome lecomte @ js13kgames 2022 / proudly made in canada
+- end screen
+  - score? nb kills + central core health?
+  - hiscore?
+  - Twitter share (image would be great)
+  - main menu
+- screenshake
+- music
+- other weapons?
+- description and screenshots
+
+- style
+  black and white 1bit (simple)
+  bullet or mussel streak
+  enemy death splat red
+  central core?
+
+
+inspiration
+- oblivion how can a man die better than facing fearful odds? you don't have to die, everybody dies point it to die well
+- star trek alien healing doctor mccoy by absorbing his wound on her
+- making dying something meaningful (so you don't play the game the same way if you can die --- coil membership)
+
 
 game engine
 ===========
@@ -13,6 +106,8 @@ game engine
 
 build chain
 ===========
+- add CCapture.js for recording in-progress movies during development
+
 custom:
 - replace all const by var before JS gets inlined in HTML
 - replace all the global variables by arguments with default value of the IIFE (e.g. const foo = 'bar' => (foo = 'bar') => { ... })
@@ -21,4 +116,9 @@ libs:
   - Mac build https://github.com/fhanau/Efficient-Compression-Tool/releases/download/v0.8.3/ect-0.8.3-macOS.zip (need manual install & permission shenanigans)
   - npm package https://www.npmjs.com/package/ect-bin (but didn't seem to be available in command line afterwards... postinstall failed?)
 - avif in place of png/webp (not enough browser support yet)
+
+
+game engine port
+- complete overall of viewport/camera/entity coordinate in map space and viewport canvas -> buffer canvas same as map
+- moveX/Y -> velX/velY
 
