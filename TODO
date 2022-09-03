@@ -6,9 +6,9 @@ Stand by me features:
     - still
     - firing
   - gun sound
-  - bullet creation / motion
+  # bullet creation / motion
   - bullet collision / removal
-  - bullet collition sound
+  - bullet collision sound
   - bullet sprite
 - hero rendering
   - sprites
