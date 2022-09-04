@@ -29,8 +29,8 @@ Stand by me features:
   - sound
     - attack
     - dying
+# AI sprite circling player
 - AI blast wave
-  - AI sprite circling player
   - blast wave rendering
   - blast wave collision / enemy death
   - AI damage

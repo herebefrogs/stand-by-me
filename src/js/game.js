@@ -60,10 +60,14 @@ const COLLISION_GROUP_FOES = 2;
 
 const ATLAS = {
   hero: {
+    aiAngle: 0,
     firingRate: 0.1,  // 10 shots per second
-    speed: 75,
+    speed: 75,        // px/s
     w: 10,
     h: 10
+  },
+  AI: {
+    speed: Math.PI    // radians/s (half a circle/s)
   },
   bullet: {
     speed: 400,
@@ -301,7 +305,6 @@ function processInputs() {
       break;
     case GAME_SCREEN:
       [crosshair.x, crosshair.y] = pointerMapPosition();
-      hero.firing = isPointerDown();
 
       hero.moveLeft = isKeyDown(
         'ArrowLeft',
@@ -321,19 +324,6 @@ function processInputs() {
         'ArrowDown',
         'KeyS'
       );
-
-      // TODO this is still messy and should be simplified/abstracted
-      if (hero.moveLeft || hero.moveRight) {
-        hero.velX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
-      } else {
-        hero.velX = 0;
-      }
-      if (hero.moveDown || hero.moveUp) {
-        hero.velY = (hero.moveUp > hero.moveDown ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveUp, hero.moveDown)) / TIME_TO_FULL_SPEED)
-      } else {
-        hero.velY = 0;
-      }
-
       break;
     case END_SCREEN:
       if (isKeyUp('KeyT')) {
@@ -363,7 +353,7 @@ function fireBullet() {
     hero.firingTime += elapsedTime;
     if (hero.firingTime > hero.firingRate) {
       hero.firingTime %= hero.firingRate;
-      const [x, y] = positionOnCircle(heroCenterX, heroCenterY, 20, angle)
+      const [x, y] = positionOnCircle(heroCenterX, heroCenterY, 2.5*hero.w, angle)
       entities.push({
         ...createEntity('bullet', COLLISION_GROUP_HERO, x, y),
         angle,
@@ -376,11 +366,31 @@ function fireBullet() {
     hero.firingTime = 0;
   }
 }
+
+function updateHero() {
+  hero.firing = isPointerDown();
+
+  if (hero.moveLeft || hero.moveRight) {
+    hero.velX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
+  } else {
+    hero.velX = 0;
+  }
+  if (hero.moveDown || hero.moveUp) {
+    hero.velY = (hero.moveUp > hero.moveDown ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveUp, hero.moveDown)) / TIME_TO_FULL_SPEED)
+  } else {
+    hero.velY = 0;
+  }
+
+  hero.aiAngle += ATLAS['AI'].speed * elapsedTime;
+  hero.aiAngle %= 2*Math.PI;
+}
+
 function update() {
   processInputs();
 
   switch (screen) {
     case GAME_SCREEN:
+      updateHero();
       entities.forEach(updateEntity);
       fireBullet();
       entities.slice(1).forEach((entity) => {
@@ -465,13 +475,14 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
     case 'hero':
       ctx.save();
       ctx.translate(entity.x, entity.y);
-      if (hero.gunAngle < 0) {
+      if (entity.gunAngle < 0) {
         // draw gun
         ctx.save();
         ctx.translate(entity.w/2, entity.h/2);
-        ctx.rotate(entity.gunAngle + Math.PI/2);
+        ctx.rotate(entity.gunAngle);
+        ctx.translate(entity.w/4, 0);
         ctx.fillStyle = '#ee1';
-        ctx.fillRect(-2, -entity.h, 4, 10);
+        ctx.fillRect(0, -2, 10, 4);
         ctx.restore();
         // draw hero
         ctx.fillStyle = '#1e1';
@@ -481,11 +492,21 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
         ctx.fillStyle = '#1e1';
         ctx.fillRect(0, 0, entity.w, entity.h);
         // draw gun
+        ctx.save();
         ctx.translate(entity.w/2, entity.h/2);
-        ctx.rotate(entity.gunAngle + Math.PI/2);
+        ctx.rotate(entity.gunAngle);
+        ctx.translate(entity.w/4, 0);
         ctx.fillStyle = '#ee1';
-        ctx.fillRect(-2, -entity.h, 4, 10);
+        ctx.fillRect(0, -2, 10, 4);
+        ctx.restore();
       }
+      // draw AI
+      ctx.translate(entity.w/2, entity.h/2);
+      ctx.rotate(entity.aiAngle);
+      ctx.translate(2.5*entity.w, 0);
+      ctx.rotate(-entity.aiAngle);
+      ctx.fillStyle = '#1ee';
+      ctx.fillRect(-5, -5, 10, 10);
       ctx.restore();
       break;
     case 'bullet':
