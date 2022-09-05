@@ -125,7 +125,7 @@ function startGame() {
       ttl: currentTime + 5000,
       type: 'text',
       x: CHARSET_SIZE,
-      y: 18 *CHARSET_SIZE,
+      y: CAMERA_HEIGHT - 2*CHARSET_SIZE,
     },
     createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH / 6, CHARSET_SIZE),
     createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH / 3, CHARSET_SIZE),
@@ -483,6 +483,11 @@ function blit() {
     cameraX, cameraY, CAMERA_WIDTH, CAMERA_HEIGHT,
     0, 0, c.width, c.height
   );
+  CTX.drawImage(
+    TEXT,
+    0, 0, CAMERA_WIDTH, CAMERA_HEIGHT,
+    0, 0, c.width, c.height
+  );
 };
 
 function render() {
@@ -513,11 +518,6 @@ function render() {
       break;
   }
 
-  BUFFER_CTX.drawImage(
-    TEXT,
-    0, 0, c.width, c.height,
-    0, 0, c.width, c.height
-  );
   blit();
 };
 

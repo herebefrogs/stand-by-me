@@ -34,7 +34,7 @@ export const initCharset = async () => {
 export const initTextBuffer = (canvas, w, h) => {
   textCanvas = canvas.cloneNode();
   textCanvas.width = w;
-  textCanvas.heigh = h;
+  textCanvas.height = h;
 
   ctx = textCanvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
