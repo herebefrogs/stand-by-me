@@ -26,7 +26,7 @@ let MIN_DISTANCE = 30;
 // click time
 let pointerDownTime = 0;
 // last pointer event (for canvas space calculations)
-let lastEvent;
+let lastEvent = { pageX: 0, pageY: 0 };
 
 // NOTE:
 // - pointer events are universal (mouse, touch, pen)
