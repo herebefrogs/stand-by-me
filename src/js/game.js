@@ -1,4 +1,4 @@
-import { isKeyDown, anyKeyDown, isKeyUp } from './inputs/keyboard';
+import { anyKeyDown, isKeyDown, isKeyUp, whichKeyDown } from './inputs/keyboard';
 import { isPointerDown, isPointerUp, pointerCanvasPosition } from './inputs/pointer';
 import { isMobile } from './mobile';
 import { checkMonetization, isMonetizationEnabled } from './monetization';
@@ -113,6 +113,14 @@ function unlockExtraContent() {
   // NOTE: remember to update the value of the monetization meta tag in src/index.html to your payment pointer
 }
 
+function setScreen(newScreen) {
+  // consume all key/pointer down so they don't trigger an action on the new screen
+  isPointerUp();
+  whichKeyDown().forEach(isKeyUp);
+
+  screen = newScreen;
+}
+
 function startGame() {
   // setRandSeed(getRandSeed());
   // if (isMonetizationEnabled()) { unlockExtraContent() }
@@ -137,7 +145,7 @@ function startGame() {
     createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
   ];
   renderMap();
-  screen = GAME_SCREEN;
+  setScreen(GAME_SCREEN);
 };
 
 function testAABBCollision(entity1, entity2) {
@@ -327,6 +335,9 @@ function updateEntityTimers(entity) {
     if (entity.hitPoints <= 0) {
       // no more hitpoints, mark for removal
       entity.ttl = -1;
+      if (entity === hero) {
+        setScreen(END_SCREEN);
+      }
     }
   }
 }
@@ -378,7 +389,7 @@ function processInputs() {
         });
       }
       if (anyKeyDown() || isPointerUp()) {
-        screen = TITLE_SCREEN;
+        setScreen(TITLE_SCREEN);
       }
       break;
   }
@@ -453,7 +464,6 @@ function update() {
               bullet.ttl = -1; // NOTE: 0 would behaves like undefined and keep the bullet
               return true;
             };
-
           })
         }
       })
