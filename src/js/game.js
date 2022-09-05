@@ -116,7 +116,7 @@ function startGame() {
   konamiIndex = 0;
   cameraX = cameraY = 0;
   hero = createEntity('hero', COLLISION_GROUP_HERO, CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
-  crosshair = { x: hero.x, y: hero.y };
+  crosshair = { x: 0, y: 0 };
   entities = [
     hero,
     {
@@ -452,6 +452,7 @@ function update() {
         }
       })
       // TODO melee attacks, hero/blastwave agasint enemies
+
       // TODO all this should be generalized
       // entities between themselves
       // entities against level (which would made constrainToViewport irrelevant

@@ -8,7 +8,7 @@ Stand by me features:
     - firing
   - gun sound
   # bullet creation / motion
-  - bullet collision / removal
+  # bullet collision / removal
   - bullet collision sound
   - bullet sprite
 - hero rendering
@@ -21,7 +21,7 @@ Stand by me features:
   - spawn by waves
   - navigation (hero or central core)
   - attack
-  - death
+  # death
   - sprites
     - moving
     - attacking
@@ -77,7 +77,7 @@ Stand by me features:
   - hiscore?
   - Twitter share (image would be great)
   - main menu
-- screenshake
+- screenshake / stop time when hit
 - music
 - other weapons?
 - description and screenshots
@@ -87,12 +87,6 @@ Stand by me features:
   bullet or mussel streak
   enemy death splat red
   central core?
-
-
-inspiration
-- oblivion how can a man die better than facing fearful odds? you don't have to die, everybody dies point it to die well
-- star trek alien healing doctor mccoy by absorbing his wound on her
-- making dying something meaningful (so you don't play the game the same way if you can die --- coil membership)
 
 
 game engine

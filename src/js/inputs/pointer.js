@@ -117,7 +117,13 @@ function setPointerDirection() {
 
 export const isPointerDown = () => pointerDownTime;
 
-export const isPointerUp = () => isPointerDown() ? pointerDownTime = 0 || true : false;
+export const isPointerUp = () => {
+  if (isPointerDown()) {
+    pointerDownTime = 0;
+    return true;
+  }
+  return false;
+}
 
 export const pointerScreenPosition = () => [x, y];
 
