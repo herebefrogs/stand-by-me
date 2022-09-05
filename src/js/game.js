@@ -106,9 +106,10 @@ function startGame() {
   entities = [
     hero,
     {
-      type: 'text',
-      text: 'how does one die better than facing fearfull odds?',
       startTime: currentTime,
+      text: 'how does one die better than facing fearfull odds?',
+      ttl: currentTime + 5000,
+      type: 'text',
       x: CHARSET_SIZE,
       y: CHARSET_SIZE,
     }
@@ -411,6 +412,9 @@ function update() {
       });
       constrainToViewport(hero);
       updateCameraWindow();
+      // keep entities with no TTL or TTL in the future
+      // remove any with a TTL in the past
+      entities = entities.filter(e => !e.ttl || e.ttl > currentTime);
       break;
   }
 };

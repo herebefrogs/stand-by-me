@@ -126,3 +126,4 @@ game engine port
 
 ECS
 - velX/velY velocity component -> update position
+- ttl component -> mark an entity to be removed in the future
