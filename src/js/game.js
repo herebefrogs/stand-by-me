@@ -62,7 +62,7 @@ const TEXT = initTextBuffer(c, CAMERA_WIDTH, CAMERA_HEIGHT);  // text buffer
 const ATLAS = {
   hero: {
     aiAngle: 0,
-    firingRate: 0.1,  // 10 shots per second
+    attackRate: 0.1,  // 10 shots per second
     speed: 75,        // px/s
     w: 10,
     h: 10
@@ -71,12 +71,16 @@ const ATLAS = {
     speed: Math.PI    // radians/s (half a circle/s)
   },
   bullet: {
+    damage: 1,
     speed: 400,
     w: 1,
     h: 10
   },
-  foe: {
-    speed: 100,
+  scout: {
+    speed: 110,
+    hitPoints: 1,
+    w: 80,
+    h: 80
   },
 };
 const FRAME_DURATION = 0.1; // duration of 1 animation frame, in seconds
@@ -112,7 +116,8 @@ function startGame() {
       type: 'text',
       x: CHARSET_SIZE,
       y: CHARSET_SIZE,
-    }
+    },
+    createEntity('scout', COLLISION_GROUP_FOES, CHARSET_SIZE, CAMERA_HEIGHT - CHARSET_SIZE)
   ];
   renderMap();
   screen = GAME_SCREEN;
@@ -359,11 +364,11 @@ function fireBullet() {
   const [velX, velY, angle] = velocityForTarget(heroCenterX, heroCenterY, crosshair.x, crosshair.y);
   hero.gunAngle = angle;
 
-  if (hero.firing) {
-    hero.firingTime ||= hero.firingRate;  // fire now if hasn't fired yet
-    hero.firingTime += elapsedTime;
-    if (hero.firingTime > hero.firingRate) {
-      hero.firingTime %= hero.firingRate;
+  if (hero.attacking) {
+    hero.attackTime ||= hero.attackRate;  // fire now if hasn't fired yet
+    hero.attackTime += elapsedTime;
+    if (hero.attackTime > hero.attackRate) {
+      hero.attackTime %= hero.attackRate;
       const [x, y] = positionOnCircle(heroCenterX, heroCenterY, 2.5*hero.w, angle)
       entities.push({
         ...createEntity('bullet', COLLISION_GROUP_HERO, x, y),
@@ -374,12 +379,12 @@ function fireBullet() {
     }
 
   } else {
-    hero.firingTime = 0;
+    hero.attackTime = 0;
   }
 }
 
 function updateHero() {
-  hero.firing = isPointerDown();
+  hero.attacking = isPointerDown();
 
   if (hero.moveLeft || hero.moveRight) {
     hero.velX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
@@ -475,8 +480,8 @@ function debugCameraWindow() {
 function renderCrosshair() {
   BUFFER_CTX.strokeStyle = '#fff';
   BUFFER_CTX.lineWidth = 2;
-  const width = hero.firing ? 10 : 12;
-  const offset = hero.firing ? 5 : 6;
+  const width = hero.attacking ? 10 : 12;
+  const offset = hero.attacking ? 5 : 6;
 
   BUFFER_CTX.strokeRect(crosshair.x - 1, crosshair.y - 1, 2, 2);
   BUFFER_CTX.strokeRect(crosshair.x - offset, crosshair.y - offset, width, width);
