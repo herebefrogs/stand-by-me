@@ -24,7 +24,7 @@ Stand by me features:
   - sprites
     - moving
     - attacking
-    - dying / dead
+    - dying / dead (green blood for germans)
   - animation
   - sound
     - attack
@@ -53,6 +53,7 @@ Stand by me features:
   - hero portrait sprite?
   - text zone
   - AI chat
+    # animated text API
     - key to pass text (or text clear after a bit)
     - level information (protect central core from infestation)
     - wave information  (infestation detected east/north/... zone 1/2...)

@@ -6,7 +6,7 @@ import { share } from './share';
 import { loadSongs, playSound, playSong } from './sound';
 import { initSpeech } from './speech';
 import { save, load } from './storage';
-import { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, CHARSET_SIZE, initCharset, renderText } from './text';
+import { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, CHARSET_SIZE, initCharset, renderText, initTextBuffer, clearTextBuffer, renderAnimatedText } from './text';
 import { getRandSeed, setRandSeed, lerp, loadImg } from './utils';
 import TILESET from '../img/tileset.webp';
 
@@ -34,16 +34,6 @@ let speak;
 
 // RENDER VARIABLES
 
-const CTX = c.getContext('2d');         // visible canvas
-const MAP = c.cloneNode();              // full map rendered off screen
-const MAP_CTX = MAP.getContext('2d');
-MAP.width = 640;                        // map size
-MAP.height = 480;
-const BUFFER = c.cloneNode();           // backbuffer
-const BUFFER_CTX = BUFFER.getContext('2d');
-BUFFER.width = 640;                     // backbuffer size, same as map
-BUFFER.height = 480;
-
 let cameraX = 0;                        // camera/viewport position in map
 let cameraY = 0;
 const CAMERA_WIDTH = 320;               // camera/viewport size
@@ -56,6 +46,17 @@ const CAMERA_WINDOW_HEIGHT = CAMERA_HEIGHT - 2*CAMERA_WINDOW_Y;
 
 const COLLISION_GROUP_HERO = 1;
 const COLLISION_GROUP_FOES = 2;
+
+const CTX = c.getContext('2d');         // visible canvas
+const BUFFER = c.cloneNode();           // backbuffer
+const BUFFER_CTX = BUFFER.getContext('2d');
+BUFFER.width = 640;                     // backbuffer size
+BUFFER.height = 480;
+const MAP = c.cloneNode();              // static elements of the map/world cached once
+const MAP_CTX = MAP.getContext('2d');
+MAP.width = 640;                        // map size, same as backbuffer
+MAP.height = 480;
+const TEXT = initTextBuffer(c, CAMERA_WIDTH, CAMERA_HEIGHT);  // text buffer
 
 
 const ATLAS = {
@@ -104,6 +105,14 @@ function startGame() {
   crosshair = { x: hero.x, y: hero.y };
   entities = [
     hero,
+    {
+      type: 'text',
+      text: 'how does one die better than facing fearfull odds?',
+      startTime: currentTime,
+      // TODO can't be x/y or updateEntity will screw up position since there is no speed
+      x_: CHARSET_SIZE,
+      y_: CHARSET_SIZE,
+    }
   ];
   renderMap();
   screen = GAME_SCREEN;
@@ -417,12 +426,12 @@ function blit() {
 };
 
 function render() {
-  BUFFER_CTX.fillStyle = '#fff';
-  BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
+  clearTextBuffer();
 
   switch (screen) {
     case TITLE_SCREEN:
-      // should use Camera Width instead of Buffer now that buffer is the whole map
+      BUFFER_CTX.fillStyle = '#fff';
+      BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       renderText('title screen', CHARSET_SIZE, CHARSET_SIZE);
       renderText(isMobile ? 'tap to start' : 'press any key', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
       if (konamiIndex === konamiCode.length) {
@@ -432,17 +441,23 @@ function render() {
     case GAME_SCREEN:
       // clear backbuffer by drawing static map elements
       BUFFER_CTX.drawImage(MAP, 0, 0, BUFFER.width, BUFFER.height);
-      renderText('game screen', cameraX + CHARSET_SIZE, cameraY + CHARSET_SIZE);
       entities.forEach(entity => renderEntity(entity));
       renderCrosshair();
       // debugCameraWindow();
       break;
     case END_SCREEN:
+      BUFFER_CTX.fillStyle = '#fff';
+      BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       renderText('end screen', CHARSET_SIZE, CHARSET_SIZE);
       // renderText(monetizationEarned(), TEXT.width - CHARSET_SIZE, TEXT.height - 2*CHARSET_SIZE, ALIGN_RIGHT);
       break;
   }
 
+  BUFFER_CTX.drawImage(
+    TEXT,
+    0, 0, c.width, c.height,
+    0, 0, c.width, c.height
+  );
   blit();
 };
 
@@ -516,7 +531,11 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       ctx.fillStyle = '#e1e';
       ctx.fillRect(0, 0, entity.w, entity.h);
       ctx.restore();
-  }
+      break;
+    case 'text':
+      renderAnimatedText(entity.text, entity.x_, entity.y_, entity.startTime, currentTime, entity.align, entity.scale)
+      break;
+    }
 };
 
 function renderMap() {
@@ -564,7 +583,7 @@ onload = async (e) => {
   onresize();
   //checkMonetization();
 
-  await initCharset(BUFFER_CTX);
+  await initCharset();
   tileset = await loadImg(TILESET);
   // speak = await initSpeech();
 
