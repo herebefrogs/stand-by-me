@@ -109,9 +109,8 @@ function startGame() {
       type: 'text',
       text: 'how does one die better than facing fearfull odds?',
       startTime: currentTime,
-      // TODO can't be x/y or updateEntity will screw up position since there is no speed
-      x_: CHARSET_SIZE,
-      y_: CHARSET_SIZE,
+      x: CHARSET_SIZE,
+      y: CHARSET_SIZE,
     }
   ];
   renderMap();
@@ -290,11 +289,13 @@ function updateEntity(entity) {
   //   entity.frame += 1;
   //   entity.frame %= ATLAS[entity.type][entity.action].length;
   // }
-  // update position
-  const scale = entity.velX && entity.velY ? RADIUS_ONE_AT_45_DEG : 1;
-  const distance = entity.speed * elapsedTime * scale;
-  entity.x += distance * entity.velX;
-  entity.y += distance * entity.velY;
+  // velocity component: update position
+  if (entity.velX || entity.velY) {
+    const scale = entity.velX && entity.velY ? RADIUS_ONE_AT_45_DEG : 1;
+    const distance = entity.speed * elapsedTime * scale;
+    entity.x += distance * entity.velX;
+    entity.y += distance * entity.velY;
+  }
 };
 
 const pointerMapPosition = () => {
@@ -533,7 +534,7 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       ctx.restore();
       break;
     case 'text':
-      renderAnimatedText(entity.text, entity.x_, entity.y_, entity.startTime, currentTime, entity.align, entity.scale)
+      renderAnimatedText(entity.text, entity.x, entity.y, entity.startTime, currentTime, entity.align, entity.scale)
       break;
     }
 };

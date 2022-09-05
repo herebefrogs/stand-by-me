@@ -124,3 +124,5 @@ game engine port
 - moveX/Y -> velX/velY
 - share lib &url= to twitter url instead of in message
 
+ECS
+- velX/velY velocity component -> update position
