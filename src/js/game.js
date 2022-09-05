@@ -65,6 +65,7 @@ const ATLAS = {
   hero: {
     aiAngle: 0,
     attackRate: 0.1,  // 10 shots per second
+    hitPoints: 100,
     speed: 75,        // px/s
     w: 10,
     h: 10
@@ -80,12 +81,14 @@ const ATLAS = {
     h: 10
   },
   scout: {
+    damage: 2,
     hitPoints: 1,
     speed: 110,
     w: 10,
     h: 10
   },
   tank: {
+    damage: 10,
     hitPoints: 10,
     speed: 55,
     w: 40,
@@ -439,7 +442,8 @@ function update() {
       // missile attacks
       bullets.forEach(bullet => {
         if (bullet.ttl > 0) {
-          enemies.forEach(foe => {
+          // should be a forEach() but find() allows to exit early
+          enemies.find(foe => {
             if (!foe.invincible && testAABBCollision(bullet, foe).collide) {
               // enemy damage
               foe.hitPoints -= bullet.damage;
@@ -447,11 +451,23 @@ function update() {
               foe.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
               // bullet spent
               bullet.ttl = -1; // NOTE: 0 would behaves like undefined and keep the bullet
+              return true;
             };
+
           })
         }
       })
-      // TODO melee attacks, hero/blastwave agasint enemies
+      if (!hero.invincible) {
+        enemies.forEach(foe => {
+          if (testAABBCollision(foe, hero).collide) {
+            // TODO if Coil mode, hero can take damage and die
+            // hero.hitPoints -= foe.damage;
+            hero.invincible = true;
+            hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
+            // TODO trigger blast wave (that's gonna be a fun collision check... or not, wave radius === player-to-foe distance)
+          }
+        })
+      }
 
       // TODO all this should be generalized
       // entities between themselves
@@ -466,6 +482,7 @@ function update() {
         });
         // hero to level collision
         constrainToViewport(hero);
+
       entities.forEach(updateEntityTimers);
       updateCameraWindow();
       // keep entities with no TTL or TTL in the future
@@ -561,11 +578,11 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
         ctx.fillRect(0, -2, 10, 4);
         ctx.restore();
         // draw hero
-        ctx.fillStyle = '#1e1';
+        ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#1e1';
         ctx.fillRect(0, 0, entity.w, entity.h);
       } else {
         // draw hero
-        ctx.fillStyle = '#1e1';
+        ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#1e1';
         ctx.fillRect(0, 0, entity.w, entity.h);
         // draw gun
         ctx.save();

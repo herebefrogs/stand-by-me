@@ -20,7 +20,7 @@ Stand by me features:
 - enemy
   - spawn by waves
   - navigation (hero or central core)
-  - attack
+  # attack
   # death
   - sprites
     - moving
