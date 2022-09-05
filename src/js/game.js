@@ -32,6 +32,10 @@ let entities;
 
 let speak;
 
+const COLLISION_GROUP_HERO = 1;
+const COLLISION_GROUP_FOES = 2;
+const INVINCIBLE_DURATION = 250; // in millisecond, time during which a hit entity is immune to further damage
+
 // RENDER VARIABLES
 
 let cameraX = 0;                        // camera/viewport position in map
@@ -44,8 +48,6 @@ const CAMERA_WINDOW_Y = 50;
 const CAMERA_WINDOW_WIDTH = CAMERA_WIDTH - 2*CAMERA_WINDOW_X;
 const CAMERA_WINDOW_HEIGHT = CAMERA_HEIGHT - 2*CAMERA_WINDOW_Y;
 
-const COLLISION_GROUP_HERO = 1;
-const COLLISION_GROUP_FOES = 2;
 
 const CTX = c.getContext('2d');         // visible canvas
 const BUFFER = c.cloneNode();           // backbuffer
@@ -73,16 +75,24 @@ const ATLAS = {
   bullet: {
     damage: 1,
     speed: 400,
+    ttl: Infinity,
     w: 1,
     h: 10
   },
   scout: {
-    speed: 110,
     hitPoints: 1,
-    w: 80,
-    h: 80
+    speed: 110,
+    w: 10,
+    h: 10
   },
+  tank: {
+    hitPoints: 10,
+    speed: 55,
+    w: 40,
+    h: 40
+  }
 };
+
 const FRAME_DURATION = 0.1; // duration of 1 animation frame, in seconds
 let tileset;   // characters sprite, embedded as a base64 encoded dataurl by build script
 
@@ -115,9 +125,13 @@ function startGame() {
       ttl: currentTime + 5000,
       type: 'text',
       x: CHARSET_SIZE,
-      y: CHARSET_SIZE,
+      y: 18 *CHARSET_SIZE,
     },
-    createEntity('scout', COLLISION_GROUP_FOES, CHARSET_SIZE, CAMERA_HEIGHT - CHARSET_SIZE)
+    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH / 6, CHARSET_SIZE),
+    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH / 3, CHARSET_SIZE),
+    createEntity('tank', COLLISION_GROUP_FOES, CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
+    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH * 2 / 3, CHARSET_SIZE),
+    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
   ];
   renderMap();
   screen = GAME_SCREEN;
@@ -287,14 +301,7 @@ function createEntity(type, collisionGroup, x = 0, y = 0) {
   };
 };
 
-function updateEntity(entity) {
-  // update animation frame
-  // entity.frameTime += elapsedTime;
-  // if (entity.frameTime > FRAME_DURATION) {
-  //   entity.frameTime -= FRAME_DURATION;
-  //   entity.frame += 1;
-  //   entity.frame %= ATLAS[entity.type][entity.action].length;
-  // }
+function updateEntityPosition(entity) {
   // velocity component: update position
   if (entity.velX || entity.velY) {
     const scale = entity.velX && entity.velY ? RADIUS_ONE_AT_45_DEG : 1;
@@ -303,6 +310,23 @@ function updateEntity(entity) {
     entity.y += distance * entity.velY;
   }
 };
+
+function updateEntityTimers(entity) {
+  // update animation frame
+  // entity.frameTime += elapsedTime;
+  // if (entity.frameTime > FRAME_DURATION) {
+  //   entity.frameTime -= FRAME_DURATION;
+  //   entity.frame += 1;
+  //   entity.frame %= ATLAS[entity.type][entity.action].length;
+  // }
+  if (entity.invincibleEndTime < currentTime) {
+    entity.invincible = false;
+    if (entity.hitPoints <= 0) {
+      // no more hitpoints, mark for removal
+      entity.ttl = -1;
+    }
+  }
+}
 
 const pointerMapPosition = () => {
   const [x, y] = pointerCanvasPosition(c.width, c.height);
@@ -407,15 +431,41 @@ function update() {
   switch (screen) {
     case GAME_SCREEN:
       updateHero();
-      entities.forEach(updateEntity);
+      entities.forEach(updateEntityPosition);
       fireBullet();
-      entities.slice(1).forEach((entity) => {
-        const test = testAABBCollision(hero, entity);
-        if (test.collide) {
-          correctAABBCollision(hero, entity, test);
+      // damage detection
+      bullets = entities.filter(e => e.type === 'bullet');
+      enemies = entities.filter(e => e.collisionGroup === COLLISION_GROUP_FOES);
+      // missile attacks
+      bullets.forEach(bullet => {
+        if (bullet.ttl > 0) {
+          enemies.forEach(foe => {
+            if (!foe.invincible && testAABBCollision(bullet, foe).collide) {
+              // enemy damage
+              foe.hitPoints -= bullet.damage;
+              foe.invincible = true;
+              foe.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
+              // bullet spent
+              bullet.ttl = -1; // NOTE: 0 would behaves like undefined and keep the bullet
+            };
+          })
         }
-      });
-      constrainToViewport(hero);
+      })
+      // TODO melee attacks, hero/blastwave agasint enemies
+      // TODO all this should be generalized
+      // entities between themselves
+      // entities against level (which would made constrainToViewport irrelevant
+      // and stop bullets from leaving the screen and live forever too)
+        // hero to entities collision
+        entities.slice(1).forEach((entity) => {
+          const test = testAABBCollision(hero, entity);
+          if (test.collide) {
+            correctAABBCollision(hero, entity, test);
+          }
+        });
+        // hero to level collision
+        constrainToViewport(hero);
+      entities.forEach(updateEntityTimers);
       updateCameraWindow();
       // keep entities with no TTL or TTL in the future
       // remove any with a TTL in the past
@@ -539,6 +589,14 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       ctx.translate(entity.x, entity.y);
       ctx.rotate(entity.angle + Math.PI/2);
       ctx.fillStyle = '#e1e';
+      ctx.fillRect(0, 0, entity.w, entity.h);
+      ctx.restore();
+      break;
+    case 'scout':
+    case 'tank':
+      ctx.save();
+      ctx.translate(entity.x, entity.y);
+      ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#11e';
       ctx.fillRect(0, 0, entity.w, entity.h);
       ctx.restore();
       break;
