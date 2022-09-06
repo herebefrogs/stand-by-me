@@ -19,7 +19,8 @@ Stand by me features:
   - animation (play forward if gun orientation same as motion, play backward if opposite)
 - enemy
   - spawn by waves
-  - navigation (hero or central core)
+  # navigation (hero)
+  - navigation (central core)
   # attack
   # death
   - sprites

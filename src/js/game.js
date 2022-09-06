@@ -32,8 +32,7 @@ let entities;
 
 let speak;
 
-const COLLISION_GROUP_HERO = 1;
-const COLLISION_GROUP_FOES = 2;
+const FOE_TYPES = ['scout', 'tank'];
 const INVINCIBLE_DURATION = 250; // in millisecond, time during which a hit entity is immune to further damage
 
 // RENDER VARIABLES
@@ -126,7 +125,7 @@ function startGame() {
   // if (isMonetizationEnabled()) { unlockExtraContent() }
   konamiIndex = 0;
   cameraX = cameraY = 0;
-  hero = createEntity('hero', COLLISION_GROUP_HERO, CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+  hero = createEntity('hero', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
   crosshair = { x: 0, y: 0 };
   entities = [
     hero,
@@ -138,11 +137,11 @@ function startGame() {
       x: CHARSET_SIZE,
       y: CAMERA_HEIGHT - 2*CHARSET_SIZE,
     },
-    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH / 6, CHARSET_SIZE),
-    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH / 3, CHARSET_SIZE),
-    createEntity('tank', COLLISION_GROUP_FOES, CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
-    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH * 2 / 3, CHARSET_SIZE),
-    createEntity('scout', COLLISION_GROUP_FOES, CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
+    createEntity('scout', CAMERA_WIDTH / 6, CHARSET_SIZE),
+    createEntity('scout', CAMERA_WIDTH / 3, CHARSET_SIZE),
+    createEntity('tank', CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
+    createEntity('scout', CAMERA_WIDTH * 2 / 3, CHARSET_SIZE),
+    createEntity('scout', CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
   ];
   renderMap();
   setScreen(GAME_SCREEN);
@@ -156,8 +155,7 @@ function testAABBCollision(entity1, entity2) {
     entity2MaxY: entity2.y + entity2.h,
   };
 
-  test.collide = entity1.collisionGroup != entity2.collisionGroup
-    && entity1.x < test.entity2MaxX
+  test.collide = entity1.x < test.entity2MaxX
     && test.entity1MaxX > entity2.x
     && entity1.y < test.entity2MaxY
     && test.entity1MaxY > entity2.y;
@@ -294,12 +292,11 @@ function positionOnCircle(centerX, centerY, radius, angle) {
   ];
 }
 
-function createEntity(type, collisionGroup, x = 0, y = 0) {
+function createEntity(type, x = 0, y = 0) {
   return {
     ...ATLAS[type], // speed, w, h
     // frame: 0,
     // frameTime: 0,
-    collisionGroup,
     moveDown: 0,
     moveLeft: 0,
     moveRight: 0,
@@ -339,9 +336,7 @@ function collectHeroInputs() {
     'ArrowDown',
     'KeyS'
   );
-}
 
-function updateHero() {
   if (hero.moveLeft || hero.moveRight) {
     hero.velX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
   } else {
@@ -354,17 +349,7 @@ function updateHero() {
   }
 }
 
-function updateEntityPosition(entity) {
-  // velocity component: update position
-  if (entity.velX || entity.velY) {
-    const scale = entity.velX && entity.velY ? RADIUS_ONE_AT_45_DEG : 1;
-    const distance = entity.speed * elapsedTime * scale;
-    entity.x += distance * entity.velX;
-    entity.y += distance * entity.velY;
-  }
-}
-
-function fireBullet() {
+function handleHeroAttack() {
   const heroCenterX = hero.x+hero.w/2;
   const heroCenterY = hero.y+hero.h/2;
 
@@ -376,9 +361,9 @@ function fireBullet() {
     hero.attackTime += elapsedTime;
     if (hero.attackTime > hero.attackRate) {
       hero.attackTime %= hero.attackRate;
-      const [x, y] = positionOnCircle(heroCenterX, heroCenterY, 2.5*hero.w, angle)
-      entities.push({
-        ...createEntity('bullet', COLLISION_GROUP_HERO, x, y),
+      const [x, y] = positionOnCircle(heroCenterX, heroCenterY, hero.w, angle)
+      entities.unshift({
+        ...createEntity('bullet', x, y),
         angle,
         velX,
         velY,
@@ -386,6 +371,27 @@ function fireBullet() {
     }
   } else {
     hero.attackTime = 0;
+  }
+}
+
+function handleEnemyVelocity(entity) {
+  const entityCenterX = entity.x+entity.w/2;
+  const entityCenterY = entity.y+entity.h/2;
+
+  // TODO decide whether aiming for the central core or the player
+  const heroCenterX = hero.x+hero.w/2;
+  const heroCenterY = hero.y+hero.h/2;
+
+  [entity.velX, entity.velY, _] = velocityForTarget(entityCenterX, entityCenterY, heroCenterX, heroCenterY);
+}
+
+function updateEntityPosition(entity) {
+  // velocity component: update position
+  if (entity.velX || entity.velY) {
+    const scale = entity.velX && entity.velY ? RADIUS_ONE_AT_45_DEG : 1;
+    const distance = entity.speed * elapsedTime * scale;
+    entity.x += distance * entity.velX;
+    entity.y += distance * entity.velY;
   }
 }
 
@@ -463,32 +469,37 @@ function update() {
       break;
     case GAME_SCREEN:
       collectHeroInputs();
-      updateHero();
+      handleHeroAttack();
       entities.forEach(updateEntityPosition);
-      fireBullet();
+      enemies = entities.filter(e => FOE_TYPES.includes(e.type));
+      enemies.forEach(handleEnemyVelocity);
       // damage detection
       bullets = entities.filter(e => e.type === 'bullet');
-      enemies = entities.filter(e => e.collisionGroup === COLLISION_GROUP_FOES);
       handleMissileAttacks(bullets, enemies);
       handleMeleeAttacks(enemies);
-
+      
       // position overlap detection
-      // TODO all this should be generalized
-      // entities between themselves
-      // entities against level (which would made constrainToViewport irrelevant
-      // and stop bullets from leaving the screen and live forever too)
-        // hero to entities collision
-        entities.slice(1).forEach((entity) => {
-          const test = testAABBCollision(hero, entity);
+      const colliders = [...enemies, hero];
+      colliders.forEach((entity1, i) => {
+        colliders.slice(i+1).forEach(entity2 => {
+          const test = testAABBCollision(entity1, entity2);
+          // TODO damn, foes don't collide with each other because they're in the same group!!!
+          // must rethink groups
           if (test.collide) {
-            correctAABBCollision(hero, entity, test);
+            console.log('collision', entity1.type, entity2.type)
+            correctAABBCollision(entity1, entity2, test);
+            console.log('collision resolved?', testAABBCollision(entity1, entity2).collide)
+
           }
-        });
-        // hero to level collision
-        constrainToViewport(hero);
+        })
+      })
+      // TODO bullets, hero, enemies against level
+      // will make constrainToViewport obsolete
+      constrainToViewport(hero);
 
       entities.forEach(updateEntityTimers);
       updateCameraWindow();
+
       // keep entities with no TTL or TTL in the future
       // remove any with a TTL in the past
       entities = entities.filter(e => !e.ttl || e.ttl > currentTime);
