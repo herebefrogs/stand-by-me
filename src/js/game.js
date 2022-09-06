@@ -312,6 +312,48 @@ function createEntity(type, collisionGroup, x = 0, y = 0) {
   };
 };
 
+const pointerMapPosition = () => {
+  const [x, y] = pointerCanvasPosition(c.width, c.height);
+  return [x*CAMERA_WIDTH/c.width + cameraX, y*CAMERA_HEIGHT/c.height + cameraY].map(Math.round);
+}
+
+function collectHeroInputs() {
+  [crosshair.x, crosshair.y] = pointerMapPosition();
+  hero.attacking = isPointerDown();
+
+  hero.moveLeft = isKeyDown(
+    'ArrowLeft',
+    'KeyA',   // English Keyboard layout
+    'KeyQ'    // French keyboard layout
+  );
+  hero.moveRight = isKeyDown(
+    'ArrowRight',
+    'KeyD'
+  );
+  hero.moveUp = isKeyDown(
+    'ArrowUp',
+    'KeyW',   // English Keyboard layout
+    'KeyZ'    // French keyboard layout
+  );
+  hero.moveDown = isKeyDown(
+    'ArrowDown',
+    'KeyS'
+  );
+}
+
+function updateHero() {
+  if (hero.moveLeft || hero.moveRight) {
+    hero.velX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
+  } else {
+    hero.velX = 0;
+  }
+  if (hero.moveDown || hero.moveUp) {
+    hero.velY = (hero.moveUp > hero.moveDown ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveUp, hero.moveDown)) / TIME_TO_FULL_SPEED)
+  } else {
+    hero.velY = 0;
+  }
+}
+
 function updateEntityPosition(entity) {
   // velocity component: update position
   if (entity.velX || entity.velY) {
@@ -319,79 +361,6 @@ function updateEntityPosition(entity) {
     const distance = entity.speed * elapsedTime * scale;
     entity.x += distance * entity.velX;
     entity.y += distance * entity.velY;
-  }
-};
-
-function updateEntityTimers(entity) {
-  // update animation frame
-  // entity.frameTime += elapsedTime;
-  // if (entity.frameTime > FRAME_DURATION) {
-  //   entity.frameTime -= FRAME_DURATION;
-  //   entity.frame += 1;
-  //   entity.frame %= ATLAS[entity.type][entity.action].length;
-  // }
-  if (entity.invincibleEndTime < currentTime) {
-    entity.invincible = false;
-    if (entity.hitPoints <= 0) {
-      // no more hitpoints, mark for removal
-      entity.ttl = -1;
-      if (entity === hero) {
-        setScreen(END_SCREEN);
-      }
-    }
-  }
-}
-
-const pointerMapPosition = () => {
-  const [x, y] = pointerCanvasPosition(c.width, c.height);
-  return [x*CAMERA_WIDTH/c.width + cameraX, y*CAMERA_HEIGHT/c.height + cameraY].map(Math.round);
-}
-
-function processInputs() {
-  switch (screen) {
-    case TITLE_SCREEN:
-      if (isKeyUp(konamiCode[konamiIndex])) {
-        konamiIndex++;
-      }
-      if (anyKeyDown() || isPointerUp()) {
-        startGame();
-      }
-      break;
-    case GAME_SCREEN:
-      [crosshair.x, crosshair.y] = pointerMapPosition();
-
-      hero.moveLeft = isKeyDown(
-        'ArrowLeft',
-        'KeyA',   // English Keyboard layout
-        'KeyQ'    // French keyboard layout
-      );
-      hero.moveRight = isKeyDown(
-        'ArrowRight',
-        'KeyD'
-      );
-      hero.moveUp = isKeyDown(
-        'ArrowUp',
-        'KeyW',   // English Keyboard layout
-        'KeyZ'    // French keyboard layout
-      );
-      hero.moveDown = isKeyDown(
-        'ArrowDown',
-        'KeyS'
-      );
-      break;
-    case END_SCREEN:
-      if (isKeyUp('KeyT')) {
-        // TODO can I share an image of the game?
-        share({
-          title: document.title,
-          text: 'Check this game template made by @herebefrogs',
-          url: 'https://bit.ly/gmjblp'
-        });
-      }
-      if (anyKeyDown() || isPointerUp()) {
-        setScreen(TITLE_SCREEN);
-      }
-      break;
   }
 }
 
@@ -415,70 +384,95 @@ function fireBullet() {
         velY,
       })
     }
-
   } else {
     hero.attackTime = 0;
   }
 }
 
-function updateHero() {
-  hero.attacking = isPointerDown();
+function handleMissileAttacks(bullets, enemies) {
+  bullets.forEach(bullet => {
+    if (bullet.ttl > 0) {
+      // should be a forEach() but find() allows to exit early
+      enemies.find(foe => {
+        if (!foe.invincible && testAABBCollision(bullet, foe).collide) {
+          // enemy damage
+          foe.hitPoints -= bullet.damage;
+          foe.invincible = true;
+          foe.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
+          // bullet spent
+          bullet.ttl = -1; // NOTE: 0 would behaves like undefined and keep the bullet
+          // don't check further enemies since bullet is spent
+          return true;
+        };
+      })
+    }
+  })
+}
 
-  if (hero.moveLeft || hero.moveRight) {
-    hero.velX = (hero.moveLeft > hero.moveRight ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveLeft, hero.moveRight)) / TIME_TO_FULL_SPEED)
-  } else {
-    hero.velX = 0;
+function handleMeleeAttacks(enemies) {
+  if (!hero.invincible) {
+    enemies.find(foe => {
+      if (testAABBCollision(foe, hero).collide) {
+        // TODO if Coil mode, hero can take damage and die
+        // hero.hitPoints -= foe.damage;
+        hero.invincible = true;
+        hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
+        // TODO trigger blast wave (that's gonna be a fun collision check... or not, wave radius === player-to-foe distance)
+        // don't check further eneies since hero can't be hurt for a while
+        return true;
+      }
+    })
   }
-  if (hero.moveDown || hero.moveUp) {
-    hero.velY = (hero.moveUp > hero.moveDown ? -1 : 1) * lerp(0, 1, (currentTime - Math.max(hero.moveUp, hero.moveDown)) / TIME_TO_FULL_SPEED)
-  } else {
-    hero.velY = 0;
+}
+
+function updateEntityTimers(entity) {
+  if (entity.invincibleEndTime < currentTime) {
+    entity.invincible = false;
+    if (entity.hitPoints <= 0) {
+      // no more hitpoints, mark for removal
+      entity.ttl = -1;
+      if (entity === hero) {
+        setScreen(END_SCREEN);
+      }
+    }
   }
 
-  hero.aiAngle += ATLAS['AI'].speed * elapsedTime;
-  hero.aiAngle %= 2*Math.PI;
+  // update animation frame
+  // entity.frameTime += elapsedTime;
+  // if (entity.frameTime > FRAME_DURATION) {
+  //   entity.frameTime -= FRAME_DURATION;
+  //   entity.frame += 1;
+  //   entity.frame %= ATLAS[entity.type][entity.action].length;
+  // }
+
+  if (entity === hero) {
+    hero.aiAngle += ATLAS['AI'].speed * elapsedTime;
+    hero.aiAngle %= 2*Math.PI;
+  }
 }
 
 function update() {
-  processInputs();
-
   switch (screen) {
+    case TITLE_SCREEN:
+      if (isKeyUp(konamiCode[konamiIndex])) {
+        konamiIndex++;
+      }
+      if (anyKeyDown() || isPointerUp()) {
+        startGame();
+      }
+      break;
     case GAME_SCREEN:
+      collectHeroInputs();
       updateHero();
       entities.forEach(updateEntityPosition);
       fireBullet();
       // damage detection
       bullets = entities.filter(e => e.type === 'bullet');
       enemies = entities.filter(e => e.collisionGroup === COLLISION_GROUP_FOES);
-      // missile attacks
-      bullets.forEach(bullet => {
-        if (bullet.ttl > 0) {
-          // should be a forEach() but find() allows to exit early
-          enemies.find(foe => {
-            if (!foe.invincible && testAABBCollision(bullet, foe).collide) {
-              // enemy damage
-              foe.hitPoints -= bullet.damage;
-              foe.invincible = true;
-              foe.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
-              // bullet spent
-              bullet.ttl = -1; // NOTE: 0 would behaves like undefined and keep the bullet
-              return true;
-            };
-          })
-        }
-      })
-      if (!hero.invincible) {
-        enemies.forEach(foe => {
-          if (testAABBCollision(foe, hero).collide) {
-            // TODO if Coil mode, hero can take damage and die
-            // hero.hitPoints -= foe.damage;
-            hero.invincible = true;
-            hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
-            // TODO trigger blast wave (that's gonna be a fun collision check... or not, wave radius === player-to-foe distance)
-          }
-        })
-      }
+      handleMissileAttacks(bullets, enemies);
+      handleMeleeAttacks(enemies);
 
+      // position overlap detection
       // TODO all this should be generalized
       // entities between themselves
       // entities against level (which would made constrainToViewport irrelevant
@@ -498,6 +492,19 @@ function update() {
       // keep entities with no TTL or TTL in the future
       // remove any with a TTL in the past
       entities = entities.filter(e => !e.ttl || e.ttl > currentTime);
+      break;
+    case END_SCREEN:
+      if (isKeyUp('KeyT')) {
+        // TODO can I share an image of the game?
+        share({
+          title: document.title,
+          text: 'Check this game template made by @herebefrogs',
+          url: 'https://bit.ly/gmjblp'
+        });
+      }
+      if (anyKeyDown() || isPointerUp()) {
+        setScreen(TITLE_SCREEN);
+      }
       break;
   }
 };
