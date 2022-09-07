@@ -35,7 +35,7 @@ Stand by me features:
 - AI blast wave
   - # blast wave rendering
   - # blast wave collision / enemy death
-  - AI damage
+  - # AI damage
   - sound
 - level
   - central core

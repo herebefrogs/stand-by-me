@@ -27,9 +27,11 @@ const RADIUS_ONE_AT_45_DEG = Math.cos(Math.PI / 4);
 const TIME_TO_FULL_SPEED = 150;                // in millis, duration till going full speed in any direction
 
 let hero;
+let ai;
 let crosshair;  // coordinate in viewport space (add viewportOffset to convert to map space)
 let blast;
 let entities;
+let invincibleMode;
 
 let speak;
 
@@ -63,7 +65,6 @@ const TEXT = initTextBuffer(c, CAMERA_WIDTH, CAMERA_HEIGHT);  // text buffer
 
 const ATLAS = {
   hero: {
-    aiAngle: 0,
     attackRate: 0.1,  // 10 shots per second
     hitPoints: 100,
     speed: 75,        // px/s
@@ -71,7 +72,11 @@ const ATLAS = {
     h: 10
   },
   AI: {
-    speed: Math.PI    // radians/s (half a circle/s)
+    angle: 0,
+    hitPoints: 10,
+    speed: Math.PI,   // radians/s (half a circle/s)
+    w: 10,
+    h: 10,
   },
   bullet: {
     damage: 1,
@@ -132,10 +137,14 @@ function startGame() {
   konamiIndex = 0;
   cameraX = cameraY = 0;
   hero = createEntity('hero', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+  ai = { type: 'AI', ...ATLAS['AI'] }
+  // TODO have a toggle on title screen that only Coil members can switch
+  invincibleMode = true;
   crosshair = { x: 0, y: 0 };
   blast = 0;
   entities = [
     hero,
+    ai,
     // {
     //   startTime: currentTime,
     //   text: 'how does one die better than facing fearfull odds?',
@@ -495,6 +504,11 @@ function updateEntityPosition(entity) {
   if (entity.maxRadius) {
     entity.radius += entity.speed * elapsedTime;
   }
+  // angular velocity component: update angle
+  if (entity === ai) {
+    entity.angle += entity.speed * elapsedTime;
+    entity.angle %= 2*Math.PI;
+  }
 }
 
 function handleMissileAttacks(bullets, enemies) {
@@ -537,10 +551,17 @@ function handleMeleeAttacks(enemies) {
   if (!hero.invincible) {
     enemies.find(foe => {
       if (testAABBCollision(foe, hero).collide) {
-        // TODO if Coil mode, hero can take damage and die
-        // hero.hitPoints -= foe.damage;
+        // who really takes damage?
+        if (invincibleMode) {
+          ai.hitPoints -= foe.damage; 
+        } else {
+          hero.hitPoints -= foe.damage; 
+        }
+
+        // mark hero has hit
         hero.invincible = true;
         hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
+
         if (!blast) {
           // trigger blast wave
           blast = {
@@ -552,6 +573,7 @@ function handleMeleeAttacks(enemies) {
           }
           entities.unshift(blast);
         }
+
         // don't check further enemies since hero can't be hurt for a while
         return true;
       }
@@ -585,9 +607,8 @@ function updateEntityTimers(entity) {
   //   entity.frame %= ATLAS[entity.type][entity.action].length;
   // }
 
-  if (entity === hero) {
-    hero.aiAngle += ATLAS['AI'].speed * elapsedTime;
-    hero.aiAngle %= 2*Math.PI;
+  if (entity === ai && ai.hitPoints <= 0) {
+    entity.ttl = -1;
   }
 }
 
@@ -757,13 +778,13 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
         ctx.fillRect(0, -2, 10, 4);
         ctx.restore();
       }
-      // draw AI
-      ctx.translate(entity.w/2, entity.h/2);
-      ctx.rotate(entity.aiAngle);
+    case 'AI':
+      ctx.translate(hero.x + hero.w/2, hero.y + hero.h/2);
+      ctx.rotate(entity.angle);
       ctx.translate(2.5*entity.w, 0);
-      ctx.rotate(-entity.aiAngle);
+      ctx.rotate(-entity.angle);
       ctx.fillStyle = '#1ee';
-      ctx.fillRect(-5, -5, 10, 10);
+      ctx.fillRect(-entity.w/2, -entity.h/2, entity.w, entity.h);
       break;
     case 'bullet':
       ctx.translate(entity.x, entity.y);
