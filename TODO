@@ -18,7 +18,7 @@ Stand by me features:
   - orientation (facing same as gun, not facing motion)
   - animation (play forward if gun orientation same as motion, play backward if opposite)
 - enemy
-  - spawn by waves
+  - spawn by waves (tied to level design?)
   # navigation (hero)
   - navigation (central core)
   # attack
@@ -33,8 +33,8 @@ Stand by me features:
     - dying
 # AI sprite circling player
 - AI blast wave
-  - blast wave rendering
-  - blast wave collision / enemy death
+  - # blast wave rendering
+  - # blast wave collision / enemy death
   - AI damage
   - sound
 - level

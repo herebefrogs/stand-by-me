@@ -28,6 +28,7 @@ const TIME_TO_FULL_SPEED = 150;                // in millis, duration till going
 
 let hero;
 let crosshair;  // coordinate in viewport space (add viewportOffset to convert to map space)
+let blast;
 let entities;
 
 let speak;
@@ -79,6 +80,11 @@ const ATLAS = {
     w: 1,
     h: 10
   },
+  blast: {
+    speed: 400,
+    maxRadius: 400,
+    w: 20,
+  },
   scout: {
     damage: 2,
     hitPoints: 1,
@@ -127,16 +133,17 @@ function startGame() {
   cameraX = cameraY = 0;
   hero = createEntity('hero', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
   crosshair = { x: 0, y: 0 };
+  blast = 0;
   entities = [
     hero,
-    {
-      startTime: currentTime,
-      text: 'how does one die better than facing fearfull odds?',
-      ttl: currentTime + 5000,
-      type: 'text',
-      x: CHARSET_SIZE,
-      y: CAMERA_HEIGHT - 2*CHARSET_SIZE,
-    },
+    // {
+    //   startTime: currentTime,
+    //   text: 'how does one die better than facing fearfull odds?',
+    //   ttl: currentTime + 5000,
+    //   type: 'text',
+    //   x: CHARSET_SIZE,
+    //   y: CAMERA_HEIGHT - 2*CHARSET_SIZE,
+    // },
     createEntity('scout', CAMERA_WIDTH / 6, CHARSET_SIZE),
     createEntity('scout', CAMERA_WIDTH / 3, CHARSET_SIZE),
     createEntity('tank', CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
@@ -149,18 +156,109 @@ function startGame() {
 
 function testAABBCollision(entity1, entity2) {
   const test = {
+    left: entity1.x - (entity2.x + entity2.w),
+    right: entity1.x + entity1.w - entity2.x,
+    top: entity1.y - (entity2.y + entity2.h),
+    bottom: entity1.y + entity1.h - entity2.y,
     entity1MaxX: entity1.x + entity1.w,
     entity1MaxY: entity1.y + entity1.h,
     entity2MaxX: entity2.x + entity2.w,
     entity2MaxY: entity2.y + entity2.h,
   };
 
-  test.collide = entity1.x < test.entity2MaxX
-    && test.entity1MaxX > entity2.x
-    && entity1.y < test.entity2MaxY
-    && test.entity1MaxY > entity2.y;
+  test.collide = test.left < 0
+    && test.right > 0
+    && test.top < 0
+    && test.bottom > 0;
 
   return test;
+};
+
+// entity1 collided into entity2, both can be moved
+function correct2EntitiesCollision(entity1, entity2, test) {
+  const { entity1MaxX, entity1MaxY, entity2MaxX, entity2MaxY } = test;
+
+  const deltaMaxX = entity1MaxX - entity2.x;
+  const deltaMaxY = entity1MaxY - entity2.y;
+  const deltaMinX = entity2MaxX - entity1.x;
+  const deltaMinY = entity2MaxY - entity1.y;
+
+  // AABB collision response (homegrown wall sliding, not physically correct
+  // because just pushing along one axis by the distance overlapped)
+
+  const velSumX = Math.abs(entity1.velX) + Math.abs(entity2.velX);
+  const velSumY = Math.abs(entity1.velY) + Math.abs(entity2.velY);
+
+  // entity1 moving down/right
+  if (entity1.velX > 0 && entity1.velY > 0) {
+    if (deltaMaxX < deltaMaxY) {
+      // collided right side first
+      // TODO should be proportional to each entity's velocity
+      // (e.g. the faster the less displaced)
+      entity1.x -= deltaMaxX / 2;
+      entity2.x += deltaMaxX / 2;
+    } else {
+      // collided top side first
+      entity1.y -= deltaMaxY / 2;
+      entity2.y += deltaMaxY / 2;
+    }
+  }
+  // entity1 moving up/right
+  else if (entity1.velX > 0 && entity1.velY < 0) {
+    if (deltaMaxX < deltaMinY) {
+      // collided right side first
+      entity1.x -= deltaMaxX / 2;
+      entity2.x += deltaMaxX / 2;
+    } else {
+      // collided bottom side first
+      entity1.y += deltaMinY / 2;
+      entity2.y -= deltaMinY / 2;
+    }
+  }
+  // entity1 moving right
+  else if (entity1.velX > 0) {
+    entity1.x -= deltaMaxX / 2;
+    entity2.x += deltaMaxX / 2;
+  }
+  // entity1 moving down/left
+  else if (entity1.velX < 0 && entity1.velY > 0) {
+    if (deltaMinX < deltaMaxY) {
+      // collided left side first
+      entity1.x += deltaMinX / 2;
+      entity2.x -= deltaMinX / 2;
+    } else {
+      // collided top side first
+      entity1.y -= deltaMaxY / 2;
+      entity2.y += deltaMaxY / 2;
+    }
+  }
+  // entity1 moving up/left
+  else if (entity1.velX < 0 && entity1.velY < 0) {
+    if (deltaMinX < deltaMinY) {
+      // collided left side first
+      entity1.x += deltaMinX / 2;
+      entity2.x -= deltaMinX / 2;
+    } else {
+      // collided bottom side first
+      entity1.y += deltaMinY / 2;
+      entity2.y -= deltaMinY / 2;
+    }
+  }
+  // entity1 moving left
+  else if (entity1.velX < 0) {
+    entity1.x += deltaMinX / 2;
+    entity2.x -= deltaMinX / 2;
+  }
+  // entity1 moving down
+  else if (entity1.velY > 0) {
+    entity1.y -= deltaMaxY / 2;
+    entity2.y += deltaMaxY / 2;
+  }
+  // entity1 moving up
+  else if (entity1.velY < 0) {
+    entity1.y += deltaMinY / 2;
+    entity2.y -= deltaMinY / 2;
+  }
 };
 
 // entity1 collided into entity2
@@ -393,6 +491,10 @@ function updateEntityPosition(entity) {
     entity.x += distance * entity.velX;
     entity.y += distance * entity.velY;
   }
+  // radial velocity component: update radius
+  if (entity.maxRadius) {
+    entity.radius += entity.speed * elapsedTime;
+  }
 }
 
 function handleMissileAttacks(bullets, enemies) {
@@ -415,6 +517,22 @@ function handleMissileAttacks(bullets, enemies) {
   })
 }
 
+function handleBlastAttacks(enemies) {
+  enemies.forEach(foe => {
+    const distance = Math.sqrt(
+      Math.pow((foe.x + foe.w/2 - blast.x), 2) +
+      Math.pow((foe.y + foe.h/2 - blast.y), 2)
+    )
+
+    // TODO should invincible enemies be immune?
+    if (distance < blast.radius) {
+      foe.hitPoints = 0;
+      foe.invincible ||= true;
+      foe.invincibleEndTime ||= currentTime + INVINCIBLE_DURATION;  // do not reset invincible time if already invincible
+    }
+  })
+}
+
 function handleMeleeAttacks(enemies) {
   if (!hero.invincible) {
     enemies.find(foe => {
@@ -423,8 +541,18 @@ function handleMeleeAttacks(enemies) {
         // hero.hitPoints -= foe.damage;
         hero.invincible = true;
         hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
-        // TODO trigger blast wave (that's gonna be a fun collision check... or not, wave radius === player-to-foe distance)
-        // don't check further eneies since hero can't be hurt for a while
+        if (!blast) {
+          // trigger blast wave
+          blast = {
+            type: 'blast',
+            ...ATLAS['blast'],
+            radius: hero.w,
+            x: hero.x + hero.w/2,
+            y: hero.y + hero.h/2
+          }
+          entities.unshift(blast);
+        }
+        // don't check further enemies since hero can't be hurt for a while
         return true;
       }
     })
@@ -441,6 +569,12 @@ function updateEntityTimers(entity) {
         setScreen(END_SCREEN);
       }
     }
+  }
+
+  if (entity.radius > entity.maxRadius) {
+    // blast wave is spent
+    entity.ttl = -1;
+    blast = 0;
   }
 
   // update animation frame
@@ -476,6 +610,9 @@ function update() {
       // damage detection
       bullets = entities.filter(e => e.type === 'bullet');
       handleMissileAttacks(bullets, enemies);
+      if (blast) {
+        handleBlastAttacks(enemies);
+      }
       handleMeleeAttacks(enemies);
       
       // position overlap detection
@@ -486,9 +623,7 @@ function update() {
           // TODO damn, foes don't collide with each other because they're in the same group!!!
           // must rethink groups
           if (test.collide) {
-            console.log('collision', entity1.type, entity2.type)
-            correctAABBCollision(entity1, entity2, test);
-            console.log('collision resolved?', testAABBCollision(entity1, entity2).collide)
+            correct2EntitiesCollision(entity1, entity2, test);
 
           }
         })
@@ -592,9 +727,10 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
   //   Math.round(entity.x - viewportOffsetX), Math.round(entity.y - viewportOffsetY), sprite.w, sprite.h
   // );
 
+  ctx.save();
+
   switch (entity.type) {
     case 'hero':
-      ctx.save();
       ctx.translate(entity.x, entity.y);
       if (entity.gunAngle < 0) {
         // draw gun
@@ -628,28 +764,32 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       ctx.rotate(-entity.aiAngle);
       ctx.fillStyle = '#1ee';
       ctx.fillRect(-5, -5, 10, 10);
-      ctx.restore();
       break;
     case 'bullet':
-      ctx.save();
       ctx.translate(entity.x, entity.y);
       ctx.rotate(entity.angle + Math.PI/2);
       ctx.fillStyle = '#e1e';
       ctx.fillRect(0, 0, entity.w, entity.h);
-      ctx.restore();
+      break;
+    case 'blast':
+      ctx.beginPath();
+      ctx.lineWidth = entity.w;
+      ctx.arc(entity.x, entity.y, entity.radius - entity.w/2, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#1ee';
+      ctx.stroke();
+      ctx.closePath();
       break;
     case 'scout':
     case 'tank':
-      ctx.save();
-      ctx.translate(entity.x, entity.y);
       ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#11e';
-      ctx.fillRect(0, 0, entity.w, entity.h);
-      ctx.restore();
+      ctx.fillRect(entity.x, entity.y, entity.w, entity.h);
       break;
     case 'text':
       renderAnimatedText(entity.text, entity.x, entity.y, entity.startTime, currentTime, entity.align, entity.scale)
       break;
-    }
+  }
+
+  ctx.restore();
 };
 
 function renderMap() {
