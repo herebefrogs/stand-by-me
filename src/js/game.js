@@ -116,6 +116,9 @@ let elapsedTime;
 let lastTime;
 let requestId;
 let running = true;
+let stopTime;
+
+const STOP_TIME_HERO_HIT = 75; // in ms
 
 // GAMEPLAY HANDLERS
 
@@ -159,6 +162,7 @@ function startGame() {
     createEntity('scout', CAMERA_WIDTH * 2 / 3, CHARSET_SIZE),
     createEntity('scout', CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
   ];
+  stopTime = 0;
   renderMap();
   setScreen(GAME_SCREEN);
 };
@@ -562,6 +566,9 @@ function handleMeleeAttacks(enemies) {
         hero.invincible = true;
         hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
 
+        // suspend action subliminously
+        stopTime = currentTime + STOP_TIME_HERO_HIT;
+
         if (!blast) {
           // trigger blast wave
           blast = {
@@ -623,42 +630,44 @@ function update() {
       }
       break;
     case GAME_SCREEN:
-      collectHeroInputs();
-      handleHeroAttack();
-      entities.forEach(updateEntityPosition);
-      enemies = entities.filter(e => FOE_TYPES.includes(e.type));
-      enemies.forEach(handleEnemyVelocity);
-      // damage detection
-      bullets = entities.filter(e => e.type === 'bullet');
-      handleMissileAttacks(bullets, enemies);
-      if (blast) {
-        handleBlastAttacks(enemies);
-      }
-      handleMeleeAttacks(enemies);
-      
-      // position overlap detection
-      const colliders = [...enemies, hero];
-      colliders.forEach((entity1, i) => {
-        colliders.slice(i+1).forEach(entity2 => {
-          const test = testAABBCollision(entity1, entity2);
-          // TODO damn, foes don't collide with each other because they're in the same group!!!
-          // must rethink groups
-          if (test.collide) {
-            correct2EntitiesCollision(entity1, entity2, test);
-
-          }
+      if (stopTime < currentTime) {
+        collectHeroInputs();
+        handleHeroAttack();
+        entities.forEach(updateEntityPosition);
+        enemies = entities.filter(e => FOE_TYPES.includes(e.type));
+        enemies.forEach(handleEnemyVelocity);
+        // damage detection
+        bullets = entities.filter(e => e.type === 'bullet');
+        handleMissileAttacks(bullets, enemies);
+        if (blast) {
+          handleBlastAttacks(enemies);
+        }
+        handleMeleeAttacks(enemies);
+        
+        // position overlap detection
+        const colliders = [...enemies, hero];
+        colliders.forEach((entity1, i) => {
+          colliders.slice(i+1).forEach(entity2 => {
+            const test = testAABBCollision(entity1, entity2);
+            // TODO damn, foes don't collide with each other because they're in the same group!!!
+            // must rethink groups
+            if (test.collide) {
+              correct2EntitiesCollision(entity1, entity2, test);
+  
+            }
+          })
         })
-      })
-      // TODO bullets, hero, enemies against level
-      // will make constrainToViewport obsolete
-      constrainToViewport(hero);
-
-      entities.forEach(updateEntityTimers);
-      updateCameraWindow();
-
-      // keep entities with no TTL or TTL in the future
-      // remove any with a TTL in the past
-      entities = entities.filter(e => !e.ttl || e.ttl > currentTime);
+        // TODO bullets, hero, enemies against level
+        // will make constrainToViewport obsolete
+        constrainToViewport(hero);
+  
+        entities.forEach(updateEntityTimers);
+        updateCameraWindow();
+  
+        // keep entities with no TTL or TTL in the future
+        // remove any with a TTL in the past
+        entities = entities.filter(e => !e.ttl || e.ttl > currentTime);
+      }
       break;
     case END_SCREEN:
       if (isKeyUp('KeyT')) {
