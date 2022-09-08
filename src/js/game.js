@@ -7,7 +7,7 @@ import { loadSongs, playSound, playSong } from './sound';
 import { initSpeech } from './speech';
 import { save, load } from './storage';
 import { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, CHARSET_SIZE, initCharset, renderText, initTextBuffer, clearTextBuffer, renderAnimatedText } from './text';
-import { getRandSeed, setRandSeed, lerp, loadImg } from './utils';
+import { getRandSeed, setRandSeed, lerp, loadImg, rand } from './utils';
 import TILESET from '../img/tileset.webp';
 
 
@@ -87,7 +87,7 @@ const ATLAS = {
   },
   blast: {
     speed: 400,
-    maxRadius: 400,
+    maxRadius: 200,
     w: 20,
   },
   scout: {
@@ -103,6 +103,14 @@ const ATLAS = {
     speed: 55,
     w: 40,
     h: 40
+  },
+  ingress: {
+    odds: {
+      tank: 0.15, // %
+      scout: 0.85 // %
+    },
+    rate: 1, // foe per second
+    spawnTime: 0,
   }
 };
 
@@ -135,7 +143,7 @@ function setScreen(newScreen) {
 }
 
 function startGame() {
-  // setRandSeed(getRandSeed());
+  setRandSeed('js13k2022');
   // if (isMonetizationEnabled()) { unlockExtraContent() }
   konamiIndex = 0;
   cameraX = cameraY = 0;
@@ -161,6 +169,7 @@ function startGame() {
     createEntity('tank', CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
     createEntity('scout', CAMERA_WIDTH * 2 / 3, CHARSET_SIZE),
     createEntity('scout', CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
+    { type: 'ingress', x: 0, y: CAMERA_HEIGHT / 2, ...ATLAS['ingress'] },
   ];
   stopTime = 0;
   renderMap();
@@ -485,15 +494,21 @@ function handleHeroAttack() {
   }
 }
 
-function handleEnemyVelocity(entity) {
-  const entityCenterX = entity.x+entity.w/2;
-  const entityCenterY = entity.y+entity.h/2;
+function spawnEnemy(ingress) {
+  if (ingress.spawnTime < currentTime) {
+    // guarantee an enemy is always spawned
+    let cumulativeOdd = 0;
 
-  // TODO decide whether aiming for the central core or the player
-  const heroCenterX = hero.x+hero.w/2;
-  const heroCenterY = hero.y+hero.h/2;
+    Object.entries(ingress.odds).find(([type, odd]) => {
+      cumulativeOdd += odd;
 
-  [entity.velX, entity.velY, _] = velocityForTarget(entityCenterX, entityCenterY, heroCenterX, heroCenterY);
+      if (rand() < cumulativeOdd) {
+        entities.push(createEntity(type, ingress.x, ingress.y));
+        ingress.spawnTime = currentTime + ingress.rate;
+        return true;
+      }
+    })
+  }
 }
 
 function updateEntityPosition(entity) {
@@ -513,6 +528,17 @@ function updateEntityPosition(entity) {
     entity.angle += entity.speed * elapsedTime;
     entity.angle %= 2*Math.PI;
   }
+}
+
+function handleEnemyVelocity(entity) {
+  const entityCenterX = entity.x+entity.w/2;
+  const entityCenterY = entity.y+entity.h/2;
+
+  // TODO decide whether aiming for the central core or the player
+  const heroCenterX = hero.x+hero.w/2;
+  const heroCenterY = hero.y+hero.h/2;
+
+  [entity.velX, entity.velY, _] = velocityForTarget(entityCenterX, entityCenterY, heroCenterX, heroCenterY);
 }
 
 function handleMissileAttacks(bullets, enemies) {
@@ -633,6 +659,8 @@ function update() {
       if (stopTime < currentTime) {
         collectHeroInputs();
         handleHeroAttack();
+        ingresses = entities.filter(e => e.type === 'ingress');
+        ingresses.forEach(spawnEnemy);
         entities.forEach(updateEntityPosition);
         enemies = entities.filter(e => FOE_TYPES.includes(e.type));
         enemies.forEach(handleEnemyVelocity);
