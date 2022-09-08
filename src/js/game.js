@@ -73,7 +73,7 @@ const ATLAS = {
   },
   AI: {
     angle: 0,
-    hitPoints: 10,
+    hitPoints: 25,
     speed: Math.PI,   // radians/s (half a circle/s)
     w: 10,
     h: 10,
@@ -582,10 +582,10 @@ function handleMeleeAttacks(enemies) {
     enemies.find(foe => {
       if (testAABBCollision(foe, hero).collide) {
         // who really takes damage?
-        if (invincibleMode) {
+        if (invincibleMode && ai.hitPoints > 0) {
           ai.hitPoints -= foe.damage; 
         } else {
-          hero.hitPoints -= foe.damage; 
+          hero.hitPoints -= foe.damage;
         }
 
         // mark hero has hit
@@ -595,8 +595,8 @@ function handleMeleeAttacks(enemies) {
         // suspend action subliminously
         stopTime = currentTime + STOP_TIME_HERO_HIT;
 
-        if (!blast) {
-          // trigger blast wave
+        // trigger blast wave if AI still alive
+        if (!blast && ai.hitPoints > 0) {
           blast = {
             type: 'blast',
             ...ATLAS['blast'],
@@ -621,7 +621,8 @@ function updateEntityTimers(entity) {
       // no more hitpoints, mark for removal
       entity.ttl = -1;
       if (entity === hero) {
-        setScreen(END_SCREEN);
+        hero.ded = true;
+        stopTime = currentTime + 1000;
       }
     }
   }
@@ -657,6 +658,10 @@ function update() {
       break;
     case GAME_SCREEN:
       if (stopTime < currentTime) {
+        if (hero.ded) {
+          setScreen(END_SCREEN);
+          return;
+        }
         collectHeroInputs();
         handleHeroAttack();
         ingresses = entities.filter(e => e.type === 'ingress');
@@ -753,6 +758,7 @@ function render() {
       BUFFER_CTX.fillStyle = '#fff';
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       renderText('end screen', CHARSET_SIZE, CHARSET_SIZE);
+      renderText('you ded', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
       // renderText(monetizationEarned(), TEXT.width - CHARSET_SIZE, TEXT.height - 2*CHARSET_SIZE, ALIGN_RIGHT);
       break;
   }
