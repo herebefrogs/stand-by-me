@@ -6,7 +6,7 @@ import { lerp, loadImg } from './utils';
 // L = left arrow
 // R = right arrow
 // T = teapot icon
-export const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789.:!-%,/';
+export const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789.:!-%,/#[]UDLR?\'=';
 
 export const ALIGN_LEFT = 0;
 export const ALIGN_CENTER = 1;
@@ -14,7 +14,7 @@ export const ALIGN_RIGHT = 2;
 
 // alphabet sprite, embedded as a base64 encoded dataurl by build script
 import CHARSET from '../img/charset.webp';
-export const CHARSET_SIZE = 8; // in px
+export const CHARSET_SIZE = 5; // in px
 const TEXT_SPEED = 500;        // milliseconds per character
 let charset;
 let textCanvas;
@@ -39,7 +39,7 @@ export const initTextBuffer = (canvas, w, h) => {
   ctx = textCanvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  return textCanvas;
+  return [textCanvas, ctx];
 }
 
 export const clearTextBuffer = () => {

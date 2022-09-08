@@ -60,7 +60,7 @@ const MAP = c.cloneNode();              // static elements of the map/world cach
 const MAP_CTX = MAP.getContext('2d');
 MAP.width = 640;                        // map size, same as backbuffer
 MAP.height = 480;
-const TEXT = initTextBuffer(c, CAMERA_WIDTH, CAMERA_HEIGHT);  // text buffer
+const [TEXT, TEXT_CTX] = initTextBuffer(c, CAMERA_WIDTH, CAMERA_HEIGHT);  // text buffer
 
 
 const ATLAS = {
@@ -73,7 +73,7 @@ const ATLAS = {
   },
   AI: {
     angle: 0,
-    hitPoints: 25,
+    hitPoints: 10,
     speed: Math.PI,   // radians/s (half a circle/s)
     w: 10,
     h: 10,
@@ -113,6 +113,19 @@ const ATLAS = {
     spawnTime: 0,
   }
 };
+
+const AI_HEALTH_CHAT = {
+  9: 's.h.e.i.l.d. protocol activated!',
+  8: 'hey, that was weird...',
+  7: 'did you feel that too?',
+  6: 'outch, that really hurt!',
+  5: 'what\s... what\'s happening to me?',
+  4: 'i\'m scared!',
+  3: 'i don\'t feel so good...',
+  2: 'am i going to die?',
+  1: 'please, help me!',
+  0: '[segfault] access violation addr=0x2022-13',
+}
 
 const FRAME_DURATION = 0.1; // duration of 1 animation frame, in seconds
 let tileset;   // characters sprite, embedded as a base64 encoded dataurl by build script
@@ -156,14 +169,6 @@ function startGame() {
   entities = [
     hero,
     ai,
-    // {
-    //   startTime: currentTime,
-    //   text: 'how does one die better than facing fearfull odds?',
-    //   ttl: currentTime + 5000,
-    //   type: 'text',
-    //   x: CHARSET_SIZE,
-    //   y: CAMERA_HEIGHT - 2*CHARSET_SIZE,
-    // },
     createEntity('scout', CAMERA_WIDTH / 6, CHARSET_SIZE),
     createEntity('scout', CAMERA_WIDTH / 3, CHARSET_SIZE),
     createEntity('tank', CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
@@ -412,6 +417,29 @@ function positionOnCircle(centerX, centerY, radius, angle) {
   ];
 }
 
+const enqueueAiHealthChat = () => {
+  // flush previous health text
+  entities = entities.filter(e => e.type !== 'text');
+
+  entities.push(createText(
+    AI_HEALTH_CHAT[ai.hitPoints],
+    5000,
+    3*ai.w + 2*CHARSET_SIZE,
+    CAMERA_HEIGHT - 2*CHARSET_SIZE,
+  ));
+}
+
+const createText = (text, duration, x, y, align, scale) => ({
+  align,
+  scale,
+  startTime: currentTime,
+  text,
+  ttl: currentTime + duration,
+  type: 'text',
+  x,
+  y
+})
+
 function createEntity(type, x = 0, y = 0) {
   return {
     ...ATLAS[type], // speed, w, h
@@ -580,14 +608,16 @@ function handleBlastAttacks(enemies) {
 function handleMeleeAttacks(enemies) {
   if (!hero.invincible) {
     enemies.find(foe => {
-      if (testAABBCollision(foe, hero).collide) {
+      // must be alive to do damage
+      if (foe.hitPoints > 0 && testAABBCollision(foe, hero).collide) {
         // who really takes damage?
         if (invincibleMode && ai.hitPoints > 0) {
-          ai.hitPoints -= foe.damage; 
+          ai.hitPoints -= 1;
+          enqueueAiHealthChat();
         } else {
           hero.hitPoints -= foe.damage;
         }
-
+        
         // mark hero has hit
         hero.invincible = true;
         hero.invincibleEndTime = currentTime + INVINCIBLE_DURATION;
@@ -739,7 +769,7 @@ function render() {
 
   switch (screen) {
     case TITLE_SCREEN:
-      BUFFER_CTX.fillStyle = '#fff';
+      BUFFER_CTX.fillStyle = '#edc';
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       renderText('title screen', CHARSET_SIZE, CHARSET_SIZE);
       renderText(isMobile ? 'tap to start' : 'press any key', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
@@ -752,10 +782,11 @@ function render() {
       BUFFER_CTX.drawImage(MAP, 0, 0, BUFFER.width, BUFFER.height);
       entities.forEach(entity => renderEntity(entity));
       renderCrosshair();
+      renderAiHealth();
       // debugCameraWindow();
       break;
     case END_SCREEN:
-      BUFFER_CTX.fillStyle = '#fff';
+      BUFFER_CTX.fillStyle = '#edc';
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       renderText('end screen', CHARSET_SIZE, CHARSET_SIZE);
       renderText('you ded', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
@@ -766,20 +797,30 @@ function render() {
   blit();
 };
 
-function debugCameraWindow() {
-  BUFFER_CTX.strokeStyle = '#d00';
-  BUFFER_CTX.lineWidth = 1;
-  BUFFER_CTX.strokeRect(cameraX + CAMERA_WINDOW_X, cameraY + CAMERA_WINDOW_Y, CAMERA_WINDOW_WIDTH, CAMERA_WINDOW_HEIGHT);
-}
+// function debugCameraWindow() {
+//   BUFFER_CTX.strokeStyle = '#d00';
+//   BUFFER_CTX.lineWidth = 1;
+//   BUFFER_CTX.strokeRect(cameraX + CAMERA_WINDOW_X, cameraY + CAMERA_WINDOW_Y, CAMERA_WINDOW_WIDTH, CAMERA_WINDOW_HEIGHT);
+// }
 
 function renderCrosshair() {
-  BUFFER_CTX.strokeStyle = '#fff';
+  BUFFER_CTX.strokeStyle = hero.attacking ? '#f80' : '#248';
   BUFFER_CTX.lineWidth = 2;
   const width = hero.attacking ? 10 : 12;
   const offset = hero.attacking ? 5 : 6;
 
   BUFFER_CTX.strokeRect(crosshair.x - 1, crosshair.y - 1, 2, 2);
   BUFFER_CTX.strokeRect(crosshair.x - offset, crosshair.y - offset, width, width);
+}
+
+function renderAiHealth() {
+  if (ai.hitPoints > 0) {
+    TEXT_CTX.fillStyle = 
+      ai.hitPoints < 3 ? '#e11' :
+      ai.hitPoints < 5 ? '#ee1' :
+      '#1ee';
+    TEXT_CTX.fillRect(CHARSET_SIZE, CAMERA_HEIGHT - 3*ai.h - CHARSET_SIZE, 3*ai.w, 3*ai.h)
+  }
 }
 
 function renderEntity(entity, ctx = BUFFER_CTX) {
@@ -858,16 +899,16 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
 };
 
 function renderMap() {
-  MAP_CTX.fillStyle = '#ccc';
+  MAP_CTX.fillStyle = '#edc';
   MAP_CTX.fillRect(0, 0, MAP.width, MAP.height);
 
-  MAP_CTX.fillStyle ='#777';
-  [0, 2, 4, 6, 8, 10].forEach(x => {
-    [0, 2, 4, 6, 8, 10].forEach(y => {
-      MAP_CTX.fillRect(x*64, y*48, 64, 48);
-      MAP_CTX.fillRect((x+1)*64, (y+1)*48, 64, 48);
-    })
-  })
+  // MAP_CTX.fillStyle ='#777';
+  // [0, 2, 4, 6, 8, 10].forEach(x => {
+  //   [0, 2, 4, 6, 8, 10].forEach(y => {
+  //     MAP_CTX.fillRect(x*64, y*48, 64, 48);
+  //     MAP_CTX.fillRect((x+1)*64, (y+1)*48, 64, 48);
+  //   })
+  // })
 };
 
 // LOOP HANDLERS
