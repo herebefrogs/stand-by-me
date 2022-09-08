@@ -815,6 +815,7 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
         ctx.fillRect(0, -2, 10, 4);
         ctx.restore();
       }
+      break;
     case 'AI':
       ctx.translate(hero.x + hero.w/2, hero.y + hero.h/2);
       ctx.rotate(entity.angle);
