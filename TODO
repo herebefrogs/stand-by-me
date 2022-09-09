@@ -53,20 +53,20 @@ Stand by me features:
     - afraid 25%
     - dead
   - hero portrait sprite?
-  - text zone
+  # text zone
   - AI chat
     # animated text API
-    - key to pass text (or text clear after a bit)
+    # text clear after a bit
     - level information (protect central core from infestation)
     - wave information  (infestation detected east/north/... zone 1/2...)
     - kill cheer (yeah!)
-    - AI/hero health status (outch that one hurt! I/you don't feel/look so good... what's happening to me/you? I don't want [you] to die!)
+    # AI/hero health status (outch that one hurt! I/you don't feel/look so good... what's happening to me/you? I don't want [you] to die!)
     - lays of ancient rome quote (how can one die better than facing fearful odds?... title screen or dialog?)
   - central core health
 - loose/win condition
     central core destroyed
     AI dead?
-    player dead (coil mode)
+    # player dead (coil mode)
 - title screen
   - stand by me
   - start
@@ -88,6 +88,41 @@ Stand by me features:
   bullet or mussel streak
   enemy death splat red
   central core?
+
+Game plan
+- need level
+  - collision with bullets/enemies/hero (remove constrain)
+  - ingress waves
+  - floor plan
+- title/intro/end screens
+  - some game stats for end screen/twitter
+    nb enemies
+    nb waves
+- need sprites (looks like shit otherwise)
+  - rough static
+  - then animation
+- nice to have
+  - central Core
+    - most enemies go there
+    - hit points and loose condition is destroyed
+  # blood splash layer
+  - moar chatty text
+  - Coil mode
+    - need that DMC on/off switch on title screen
+    - want that free account/free crypto!
+  - music (will need Soundbox integration from Subwar 2063)
+
+- if time run short
+  - infinite waves, no way to win the game
+      lay of ancient rome quote on end screen
+
+
+
+
+
+
+
+
 
 
 game engine

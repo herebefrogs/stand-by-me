@@ -17,8 +17,9 @@ let konamiIndex = 0;
 // GAMEPLAY VARIABLES
 
 const TITLE_SCREEN = 0;
-const GAME_SCREEN = 1;
-const END_SCREEN = 2;
+const INTRO_SCREEN = 1;
+const GAME_SCREEN = 2;
+const END_SCREEN = 3;
 let screen = TITLE_SCREEN;
 
 // factor by which to reduce both velX and velY when player moving diagonally
@@ -114,6 +115,11 @@ const ATLAS = {
   }
 };
 
+// I am DMC, your Defense Module Companion!
+// You must protect the Central Core from infestation.
+// I will stand by your side till the bitter end.
+// How does one die better than facing fearfull odds?
+// Amirite?
 const AI_HEALTH_CHAT = {
   9: 's.h.e.i.l.d. protocol activated!',
   8: 'hey, that was weird...',
@@ -650,9 +656,13 @@ function updateEntityTimers(entity) {
     if (entity.hitPoints <= 0) {
       // no more hitpoints, mark for removal
       entity.ttl = -1;
+
       if (entity === hero) {
         hero.ded = true;
         stopTime = currentTime + 1000;
+      }
+      if (FOE_TYPES.includes(entity.type)) {
+        renderBloodSpot(entity);
       }
     }
   }
@@ -897,6 +907,14 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
 
   ctx.restore();
 };
+
+function renderBloodSpot(entity) {
+  MAP_CTX.beginPath();
+  MAP_CTX.arc(entity.x+entity.w/2, entity.y+entity.h/2, entity.w/2, 0, 2 * Math.PI);
+  MAP_CTX.fillStyle = '#f80';
+  MAP_CTX.fill();
+  MAP_CTX.closePath();
+}
 
 function renderMap() {
   MAP_CTX.fillStyle = '#edc';
