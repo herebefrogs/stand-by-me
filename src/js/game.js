@@ -9,6 +9,8 @@ import { save, load } from './storage';
 import { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, CHARSET_SIZE, initCharset, renderText, initTextBuffer, clearTextBuffer, renderAnimatedText } from './text';
 import { getRandSeed, setRandSeed, lerp, loadImg, rand } from './utils';
 import TILESET from '../img/tileset.webp';
+import FLIPPED_TILESET from '../img/flippedtileset.webp';
+
 
 
 const konamiCode = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
@@ -199,6 +201,7 @@ const AI_HEALTH_CHAT = {
 
 const FRAME_DURATION = 0.1; // duration of 1 animation frame, in seconds
 let tileset;   // characters sprite, embedded as a base64 encoded dataurl by build script
+let flipped_tileset; // characters sprite facing left
 
 // LOOP VARIABLES
 
@@ -239,11 +242,6 @@ function startGame() {
   entities = [
     hero,
     ai,
-    createEntity('scout', CAMERA_WIDTH / 6, CHARSET_SIZE),
-    createEntity('scout', CAMERA_WIDTH / 3, CHARSET_SIZE),
-    createEntity('tank', CAMERA_WIDTH / 2, 2*CHARSET_SIZE),
-    createEntity('scout', CAMERA_WIDTH * 2 / 3, CHARSET_SIZE),
-    createEntity('scout', CAMERA_WIDTH * 5 / 6, CHARSET_SIZE),
     { type: 'ingress', x: 0, y: CAMERA_HEIGHT / 2, ...ATLAS['ingress'] },
   ];
   stopTime = 0;
@@ -749,9 +747,10 @@ function updateEntityTimers(entity) {
 
   switch (entity.type) {
     case 'hero':
+      hero.movingRight = hero.velX >= 0;
       hero.aimingRight = (-Math.PI/2 < hero.gunAngle) && (hero.gunAngle < Math.PI / 2);
-      hero.movingForward = (hero.aimingRight && (hero.velX >= 0)) || (!hero.aimingRight && (hero.velX < 0));
-
+      hero.movingForward = (hero.aimingRight && hero.movingRight) || (!hero.aimingRight && !hero.movingRight);
+      
       entity.frameIndex1Time += elapsedTime;
       entity.frameIndex2Time += elapsedTime;
       if (entity.frameIndex1Time > FRAME_DURATION) {
@@ -768,6 +767,7 @@ function updateEntityTimers(entity) {
       break;
     case 'scout':
     case 'tank':
+      entity.movingRight = entity.velX >= 0;
       entity.frameIndex1Time += elapsedTime;
       entity.frameIndex2Time += elapsedTime;
       if (entity.frameIndex1Time > FRAME_DURATION) {
@@ -973,44 +973,50 @@ function renderAiHealth() {
 }
 
 function renderGun() {
+  const sheet = hero.aimingRight ? tileset : flipped_tileset;
+
   BUFFER_CTX.save();
   BUFFER_CTX.translate(hero.w/2, hero.h/2);
   BUFFER_CTX.rotate(hero.gunAngle);
   BUFFER_CTX.translate(hero.w/4, 0);
+  const destY = hero.aimingRight ? -2 : -4;
   BUFFER_CTX.drawImage(
-    tileset,
+    sheet,
     ATLAS.hero.gun.x, ATLAS.hero.gun.y, ATLAS.hero.gun.w, ATLAS.hero.gun.h,
-    0, -2, ATLAS.hero.gun.w, ATLAS.hero.gun.h
+    0, destY, ATLAS.hero.gun.w, ATLAS.hero.gun.h
   );
   BUFFER_CTX.translate(ATLAS.hero.gun.w, 2);
   if (hero.attacking) {
     const sprite = ATLAS.hero.muzzle_flash[hero.frameIndex2];
+    const destY = hero.aimingRight ? -6 : -5
     BUFFER_CTX.drawImage(
-      tileset,
+      sheet,
       sprite.x, sprite.y, sprite.w, sprite.h,
-      -1, -ATLAS.hero.gun.h, sprite.w, sprite.h
+      -1, destY, sprite.w, sprite.h
     );
   }
   BUFFER_CTX.restore();
 }
 
 function renderHero() {
+  const sheet = hero.aimingRight ? tileset : flipped_tileset;
+
   if (hero.velX || hero.velY) {
     const torso = ATLAS.hero[hero.movingForward ? 'torso_forward' : 'torso_backward'];
     BUFFER_CTX.drawImage(
-      tileset,
+      sheet,
       torso.x, torso.y, torso.w, torso.h,
       0, 0, torso.w, torso.h
     );
     const legs = ATLAS.hero.legs[hero.frameIndex1];
     BUFFER_CTX.drawImage(
-      tileset,
+      sheet,
       legs.x, legs.y, legs.w, legs.h,
       0, torso.h, legs.w, legs.h
     );
   } else {
     BUFFER_CTX.drawImage(
-      tileset,
+      sheet,
       ATLAS.hero.idle.x, ATLAS.hero.idle.y, ATLAS.hero.idle.w, ATLAS.hero.idle.h,
       0, 0, ATLAS.hero.idle.w, ATLAS.hero.idle.h
     );
@@ -1059,11 +1065,12 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       break;
     case 'scout':
     case 'tank':
+      const sheet = entity.movingRight ? tileset : flipped_tileset;
       const sprite = entity.hitPoints > 0 ?
         ATLAS[entity.type][entity.attacking ? 'bite' : 'walk'][entity.attacking ? entity.frameIndex1 : entity.frameIndex2] :
         ATLAS[entity.type].hit
       ctx.drawImage(
-        tileset,
+        sheet,
         sprite.x, sprite.y, sprite.w, sprite.h,
         Math.round(entity.x), Math.round(entity.y), sprite.w, sprite.h
       );
@@ -1135,6 +1142,7 @@ onload = async (e) => {
 
   await initCharset();
   tileset = await loadImg(TILESET);
+  flipped_tileset = await loadImg(FLIPPED_TILESET);
   // speak = await initSpeech();
 
   toggleLoop(true);
