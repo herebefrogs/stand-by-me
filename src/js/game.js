@@ -63,6 +63,12 @@ MAP.width = 640;                        // map size, same as backbuffer
 MAP.height = 480;
 const [TEXT, TEXT_CTX] = initTextBuffer(c, CAMERA_WIDTH, CAMERA_HEIGHT);  // text buffer
 
+const COLOR_LIGHT_BEIGE = '#e6d6c2';
+const COLOR_DARK_BLUE = '#1c467a';
+const COLOR_LIGHT_BLUE = '#87b6b5';
+const COLOR_OFF_PALETTE_BLUE = '#1ee';
+const COLOR_OFF_PALETTE_PURPLE = '#e1e';
+
 
 const ATLAS = {
   hero: {
@@ -488,7 +494,7 @@ const enqueueAiHealthChat = () => {
   entities.push(createText(
     AI_HEALTH_CHAT[ai.hitPoints],
     5000,
-    3*ai.w + CHARSET_SIZE,
+    4*ai.w + CHARSET_SIZE,
     2*CHARSET_SIZE,
   ));
 }
@@ -876,7 +882,7 @@ function render() {
 
   switch (screen) {
     case TITLE_SCREEN:
-      BUFFER_CTX.fillStyle = '#edc';
+      BUFFER_CTX.fillStyle = COLOR_LIGHT_BEIGE;
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       sprite = ATLAS.AI.health[10];
       TEXT_CTX.drawImage(
@@ -890,7 +896,7 @@ function render() {
       renderText('proudly made in canada', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 2*CHARSET_SIZE, ALIGN_CENTER);
       break;
     case INTRO_SCREEN:
-      BUFFER_CTX.fillStyle = '#edc';
+      BUFFER_CTX.fillStyle = COLOR_LIGHT_BEIGE;
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       sprite = ATLAS.AI.health[10];
       TEXT_CTX.drawImage(
@@ -918,7 +924,7 @@ function render() {
       // debugCameraWindow();
       break;
     case END_SCREEN:
-      BUFFER_CTX.fillStyle = '#edc';
+      BUFFER_CTX.fillStyle = COLOR_LIGHT_BEIGE;
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
       sprite = ATLAS.AI.health[0];
       TEXT_CTX.drawImage(
@@ -945,7 +951,7 @@ function render() {
 // }
 
 function renderCrosshair() {
-  BUFFER_CTX.strokeStyle = '#248';
+  BUFFER_CTX.strokeStyle = COLOR_DARK_BLUE;
   BUFFER_CTX.lineWidth = 2;
   const width = hero.attacking ? 10 : 12;
   const offset = hero.attacking ? 5 : 6;
@@ -1038,14 +1044,14 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       // TODO remove
       ctx.translate(entity.x, entity.y);
       ctx.rotate(entity.angle + Math.PI/2);
-      ctx.fillStyle = '#e1e';
+      ctx.fillStyle = COLOR_OFF_PALETTE_PURPLE;
       ctx.fillRect(0, 0, entity.w, entity.h);
       break;
     case 'blast':
       ctx.beginPath();
       ctx.lineWidth = entity.w;
       ctx.arc(entity.x, entity.y, entity.radius - entity.w/2, 0, 2 * Math.PI);
-      ctx.strokeStyle = '#1ee';
+      ctx.strokeStyle = COLOR_OFF_PALETTE_BLUE;
       ctx.stroke();
       ctx.closePath();
       break;
@@ -1061,6 +1067,8 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       );
       break;
     case 'text':
+      TEXT_CTX.fillStyle = COLOR_DARK_BLUE;
+      TEXT_CTX.fillRect(3*ai.w + CHARSET_SIZE, CHARSET_SIZE, CAMERA_WIDTH - (3*ai.w + 2*CHARSET_SIZE), 3*CHARSET_SIZE)
       renderAnimatedText(entity.text, entity.x, entity.y, entity.startTime, currentTime, entity.align, entity.scale)
       break;
   }
@@ -1071,7 +1079,7 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
 function renderBloodSpot(entity) {
   //FIXME find the sprite, but doesn't render anythng
   const sprite = ATLAS[entity.type].blood;
-  BUFFER_CTX.drawImage(
+  MAP_CTX.drawImage(
     tileset,
     sprite.x, sprite.y, sprite.w, sprite.h,
     Math.round(entity.x), Math.round(entity.y), sprite.w, sprite.h
@@ -1079,7 +1087,7 @@ function renderBloodSpot(entity) {
 }
 
 function renderMap() {
-  MAP_CTX.fillStyle = '#edc';
+  MAP_CTX.fillStyle = COLOR_LIGHT_BEIGE;
   MAP_CTX.fillRect(0, 0, MAP.width, MAP.height);
 
   // MAP_CTX.fillStyle ='#777';
