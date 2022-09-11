@@ -39,5 +39,3 @@ export const loadSongs = () => {
 export const playSong = () => { musicAudio.play() };
 
 export const stopSong = () => { musicAudio.pause() };
-
-

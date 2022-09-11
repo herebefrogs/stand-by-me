@@ -1146,9 +1146,7 @@ onload = async (e) => {
   await initCharset();
   tileset = await loadImg(TILESET);
   flipped_tileset = await loadImg(FLIPPED_TILESET);
-  setTimeout(() => {
-    loadSongs();
-  }, 100);
+  loadSongs();
 
   toggleLoop(true);
 };
@@ -1171,6 +1169,12 @@ onresize = onrotate = function() {
 document.onvisibilitychange = function(e) {
   // pause loop and game timer when switching tabs
   toggleLoop(!e.target.hidden);
+  // pause/resume music too
+  if (e.target.hidden) {
+    stopSong();
+  } else {
+    playSong();
+  }
 };
 
 addEventListener('keydown', e => {
