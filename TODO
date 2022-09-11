@@ -95,11 +95,11 @@ Game plan
   - ingress waves
   - floor plan
 # title/intro/end screens
-- need sprites (looks like shit otherwise)
+# need sprites (looks like shit otherwise)
   # rough static
   # then animation
-  - left side sprite/animations
-  - sprite for hit
+  # left side sprite/animations
+  # sprite for hit
 - nice to have
   - central Core
     - most enemies go there
@@ -109,7 +109,7 @@ Game plan
   - Coil mode
     - need that DMC on/off switch on title screen
     - want that free account/free crypto!
-  - music (will need Soundbox integration from Subwar 2063)
+  # music (will need Soundbox integration from Subwar 2063)
 
 - if time run short
   - infinite waves, no way to win the game

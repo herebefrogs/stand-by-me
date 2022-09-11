@@ -3,7 +3,7 @@ import { isPointerDown, isPointerUp, pointerCanvasPosition } from './inputs/poin
 import { isMobile } from './mobile';
 import { checkMonetization, isMonetizationEnabled } from './monetization';
 import { share } from './share';
-import { loadSongs, playSound, playSong } from './sound';
+import { loadSongs, playSong, stopSong } from './sound';
 import { initSpeech } from './speech';
 import { save, load } from './storage';
 import { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, CHARSET_SIZE, initCharset, renderText, initTextBuffer, clearTextBuffer, renderAnimatedText } from './text';
@@ -246,6 +246,7 @@ function startGame() {
   ];
   stopTime = 0;
   renderMap();
+  playSong();
   setScreen(GAME_SCREEN);
 };
 
@@ -803,6 +804,7 @@ function update() {
     case GAME_SCREEN:
       if (stopTime < currentTime) {
         if (hero.ded) {
+          stopSong();
           setScreen(END_SCREEN);
           return;
         }
@@ -894,8 +896,9 @@ function render() {
       );
       renderText('stand by me', CAMERA_WIDTH / 2, 10*CHARSET_SIZE, ALIGN_CENTER, 3);
       renderText('click / press any key', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2 + 3*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('proudly made in canada', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 6*CHARSET_SIZE, ALIGN_CENTER);
       renderText('jerome lecomte - js13kgames 2022', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 4*CHARSET_SIZE, ALIGN_CENTER);
-      renderText('proudly made in canada', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 2*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('music by ryan malm', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 2*CHARSET_SIZE, ALIGN_CENTER);
       break;
     case INTRO_SCREEN:
       BUFFER_CTX.fillStyle = COLOR_LIGHT_BEIGE;
@@ -1143,7 +1146,9 @@ onload = async (e) => {
   await initCharset();
   tileset = await loadImg(TILESET);
   flipped_tileset = await loadImg(FLIPPED_TILESET);
-  // speak = await initSpeech();
+  setTimeout(() => {
+    loadSongs();
+  }, 100);
 
   toggleLoop(true);
 };
