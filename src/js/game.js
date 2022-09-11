@@ -749,12 +749,14 @@ function updateEntityTimers(entity) {
 
   switch (entity.type) {
     case 'hero':
+      hero.aimingRight = (-Math.PI/2 < hero.gunAngle) && (hero.gunAngle < Math.PI / 2);
+      hero.movingForward = (hero.aimingRight && (hero.velX >= 0)) || (!hero.aimingRight && (hero.velX < 0));
+
       entity.frameIndex1Time += elapsedTime;
       entity.frameIndex2Time += elapsedTime;
       if (entity.frameIndex1Time > FRAME_DURATION) {
         entity.frameIndex1Time -= FRAME_DURATION;
-        const aimingRight = (-Math.PI/2 < hero.gunAngle) && (hero.gunAngle < Math.PI / 2)
-        entity.frameIndex1 += (aimingRight && (hero.velX >= 0)) || (!aimingRight && (hero.velX < 0)) ? 1 : -1;
+        entity.frameIndex1 += hero.movingForward ? 1 : -1;
         entity.frameIndex1 += ATLAS.hero.legs.length;
         entity.frameIndex1 %= ATLAS.hero.legs.length;
       }
@@ -994,7 +996,7 @@ function renderGun() {
 
 function renderHero() {
   if (hero.velX || hero.velY) {
-    const torso = ATLAS.hero.torso_forward;
+    const torso = ATLAS.hero[hero.movingForward ? 'torso_forward' : 'torso_backward'];
     BUFFER_CTX.drawImage(
       tileset,
       torso.x, torso.y, torso.w, torso.h,
