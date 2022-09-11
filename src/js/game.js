@@ -746,7 +746,9 @@ function updateEntityTimers(entity) {
       entity.frameIndex2Time += elapsedTime;
       if (entity.frameIndex1Time > FRAME_DURATION) {
         entity.frameIndex1Time -= FRAME_DURATION;
-        entity.frameIndex1 += 1;
+        const aimingRight = (-Math.PI/2 < hero.gunAngle) && (hero.gunAngle < Math.PI / 2)
+        entity.frameIndex1 += (aimingRight && (hero.velX >= 0)) || (!aimingRight && (hero.velX < 0)) ? 1 : -1;
+        entity.frameIndex1 += ATLAS.hero.legs.length;
         entity.frameIndex1 %= ATLAS.hero.legs.length;
       }
       if (entity.frameIndex2Time > FRAME_DURATION) {
