@@ -94,13 +94,11 @@ Game plan
   - collision with bullets/enemies/hero (remove constrain)
   - ingress waves
   - floor plan
-- title/intro/end screens
-  - some game stats for end screen/twitter
-    nb enemies
-    nb waves
+# title/intro/end screens
 - need sprites (looks like shit otherwise)
   # rough static
-  - then animation
+  # then animation
+  - left side sprite/animations
   - sprite for hit
 - nice to have
   - central Core

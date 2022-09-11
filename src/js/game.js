@@ -176,11 +176,6 @@ const ATLAS = {
   }
 };
 
-// I am DMC, your Defense Module Companion!
-// You must protect the Central Core from infestation.
-// I will stand by your side till the bitter end.
-// How does one die better than facing fearfull odds?
-// Amirite?
 const AI_HEALTH_CHAT = {
   9: 's.h.e.i.l.d. protocol activated!',
   8: 'hey, that was weird...',
@@ -783,9 +778,13 @@ function update() {
         konamiIndex++;
       }
       if (anyKeyDown() || isPointerUp()) {
-        startGame();
+        setScreen(INTRO_SCREEN);
       }
       break;
+    case INTRO_SCREEN:
+      if (anyKeyDown() || isPointerUp()) {
+        startGame();
+      }
     case GAME_SCREEN:
       if (stopTime < currentTime) {
         if (hero.ded) {
@@ -837,8 +836,8 @@ function update() {
         // TODO can I share an image of the game?
         share({
           title: document.title,
-          text: 'Check this game template made by @herebefrogs',
-          url: 'https://bit.ly/gmjblp'
+          text: 'I died facing fearful odds playing Stand By Me made by @herebefrogs for #js13k 2022',
+          url: 'https://bit.ly/3eBOQS6'
         });
       }
       if (anyKeyDown() || isPointerUp()) {
@@ -866,16 +865,42 @@ function blit() {
 
 function render() {
   clearTextBuffer();
+  let sprite;
 
   switch (screen) {
     case TITLE_SCREEN:
       BUFFER_CTX.fillStyle = '#edc';
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
-      renderText('title screen', CHARSET_SIZE, CHARSET_SIZE);
-      renderText(isMobile ? 'tap to start' : 'press any key', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
-      if (konamiIndex === konamiCode.length) {
-        renderText('konami mode on', BUFFER.width - CHARSET_SIZE, CHARSET_SIZE, ALIGN_RIGHT);
-      }
+      sprite = ATLAS.AI.health[10];
+      TEXT_CTX.drawImage(
+        tileset,
+        sprite.x, sprite.y, sprite.w, sprite.h,
+        CAMERA_WIDTH / 2 - sprite.w, CHARSET_SIZE, 2*sprite.w, 2*sprite.h
+      );
+      renderText('stand by me', CAMERA_WIDTH / 2, 10*CHARSET_SIZE, ALIGN_CENTER, 3);
+      renderText('click / press any key', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2 + 3*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('jerome lecomte - js13kgames 2022', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 4*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('proudly made in canada', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 2*CHARSET_SIZE, ALIGN_CENTER);
+      break;
+    case INTRO_SCREEN:
+      BUFFER_CTX.fillStyle = '#edc';
+      BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
+      sprite = ATLAS.AI.health[10];
+      TEXT_CTX.drawImage(
+        tileset,
+        sprite.x, sprite.y, sprite.w, sprite.h,
+        CAMERA_WIDTH / 2 - sprite.w, CHARSET_SIZE, 2*sprite.w, 2*sprite.h
+      );
+
+      renderText('i am your defense module companion!', CAMERA_WIDTH / 2, 10*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('i will stand by your side while', CAMERA_WIDTH / 2, 12*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('you protect the central core', CAMERA_WIDTH / 2, 14*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('from parasite contamination.', CAMERA_WIDTH / 2, 16*CHARSET_SIZE, ALIGN_CENTER);
+
+      renderText('use wasd/ULDR to move', CAMERA_WIDTH / 2, 24*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('use your mouse to aim/fire', CAMERA_WIDTH / 2, 26*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('press any key to start', CAMERA_WIDTH / 2, 28*CHARSET_SIZE, ALIGN_CENTER);
+
       break;
     case GAME_SCREEN:
       // clear backbuffer by drawing static map elements
@@ -888,9 +913,18 @@ function render() {
     case END_SCREEN:
       BUFFER_CTX.fillStyle = '#edc';
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
-      renderText('end screen', CHARSET_SIZE, CHARSET_SIZE);
-      renderText('you ded', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, ALIGN_CENTER);
-      // renderText(monetizationEarned(), TEXT.width - CHARSET_SIZE, TEXT.height - 2*CHARSET_SIZE, ALIGN_RIGHT);
+      sprite = ATLAS.AI.health[0];
+      TEXT_CTX.drawImage(
+        tileset,
+        sprite.x, sprite.y, sprite.w, sprite.h,
+        CAMERA_WIDTH / 2 - sprite.w, CHARSET_SIZE, 2*sprite.w, 2*sprite.h
+      );
+      renderText('how can one die better', CAMERA_WIDTH / 2, 10*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('than facing fearful odds', CAMERA_WIDTH / 2, 12*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('for the ashes of their ancestors', CAMERA_WIDTH / 2, 14*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('and the temples of their gods?', CAMERA_WIDTH / 2, 16*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('[t]weet', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 4*CHARSET_SIZE, ALIGN_CENTER);
+      renderText('[r]estart', CAMERA_WIDTH / 2, CAMERA_HEIGHT - 2*CHARSET_SIZE, ALIGN_CENTER);
       break;
   }
 
