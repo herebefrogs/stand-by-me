@@ -99,8 +99,9 @@ Game plan
     nb enemies
     nb waves
 - need sprites (looks like shit otherwise)
-  - rough static
+  # rough static
   - then animation
+  - sprite for hit
 - nice to have
   - central Core
     - most enemies go there

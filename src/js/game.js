@@ -43,11 +43,11 @@ const INVINCIBLE_DURATION = 250; // in millisecond, time during which a hit enti
 
 let cameraX = 0;                        // camera/viewport position in map
 let cameraY = 0;
-const CAMERA_WIDTH = 320;               // camera/viewport size
-const CAMERA_HEIGHT = 240;
+const CAMERA_WIDTH = 240;               // camera/viewport size
+const CAMERA_HEIGHT = 180;
 // camera-window & edge-snapping settings
-const CAMERA_WINDOW_X = 100;
-const CAMERA_WINDOW_Y = 50;
+const CAMERA_WINDOW_X = 50;
+const CAMERA_WINDOW_Y = 20;
 const CAMERA_WINDOW_WIDTH = CAMERA_WIDTH - 2*CAMERA_WINDOW_X;
 const CAMERA_WINDOW_HEIGHT = CAMERA_HEIGHT - 2*CAMERA_WINDOW_Y;
 
@@ -69,15 +69,44 @@ const ATLAS = {
     attackRate: 0.1,  // 10 shots per second
     hitPoints: 100,
     speed: 75,        // px/s
-    w: 10,
-    h: 10
+    w: 16,
+    h: 16,
+    idle: { x: 0, y: 48, w: 16, h: 16 },
+    torso_forward: { x: 16, y: 48, w: 16, h: 9 },
+    torso_backward: { x: 32, y: 48, w: 16, h: 9},
+    gun: { x: 48, y: 48, w: 11, h: 7 },
+    muzzle_flash: [
+      { x: 64, y: 48, w: 6, h: 9 },
+      { x: 64, y: 48, w: 5, h: 9 },
+      { x: 64, y: 48, w: 3, h: 9 },
+    ],
+    legs: [
+      { x: 16, y: 57, w: 16, h: 7 },
+      { x: 32, y: 57, w: 16, h: 7 },
+      { x: 48, y: 57, w: 16, h: 7 },
+      { x: 64, y: 57, w: 16, h: 7 },
+    ]
   },
   AI: {
     angle: 0,
     hitPoints: 10,
     speed: Math.PI,   // radians/s (half a circle/s)
-    w: 10,
-    h: 10,
+    w: 8,
+    h: 8,
+    sprite: { x: 96, y: 112, w: 8, h: 8 },
+    health: [
+      { x: 112, y: 96, w: 16, h: 16 },
+      { x: 96,  y: 96, w: 16, h: 16 },
+      { x: 80,  y: 96, w: 16, h: 16 },
+      { x: 112, y: 80, w: 16, h: 16 },
+      { x: 96,  y: 80, w: 16, h: 16 },
+      { x: 80,  y: 80, w: 16, h: 16 },
+      { x: 112, y: 64, w: 16, h: 16 },
+      { x: 96,  y: 64, w: 16, h: 16 },
+      { x: 80,  y: 64, w: 16, h: 16 },
+      { x: 80,  y: 112, w: 16, h: 16 },
+      { x: 112,  y: 112, w: 16, h: 16 },
+    ]
   },
   bullet: {
     damage: 1,
@@ -95,15 +124,35 @@ const ATLAS = {
     damage: 2,
     hitPoints: 1,
     speed: 110,
-    w: 10,
-    h: 10
+    w: 16,
+    h: 10,
+    blood: { x: 32, y: 112, w: 16, h: 10 },
+    bite: [
+      { x: 0, y: 38, w: 16, h: 10 },
+      { x: 16, y: 38, w: 16, h: 10 },
+    ],
+    walk: [
+      { x: 32, y: 38, w: 16, h: 10 },
+      { x: 48, y: 38, w: 16, h: 10 },
+      { x: 64, y: 38, w: 16, h: 10 },
+    ]
   },
   tank: {
     damage: 10,
     hitPoints: 10,
-    speed: 55,
-    w: 40,
-    h: 40
+    speed: 45,
+    w: 32,
+    h: 32,
+    blood: { x: 48, y: 96, w: 32, h: 32 },
+    bite: [
+      { x: 0, y: 0, w: 32, h: 32 },
+      { x: 32, y: 0, w: 32, h: 32 },
+    ],
+    walk: [
+      { x: 64, y: 0, w: 32, h: 32 },
+      { x: 112, y: 0, w: 32, h: 32 },
+      { x: 112, y: 32, w: 32, h: 32 },
+    ],
   },
   ingress: {
     odds: {
@@ -129,8 +178,8 @@ const AI_HEALTH_CHAT = {
   4: 'i\'m scared!',
   3: 'i don\'t feel so good...',
   2: 'am i going to die?',
-  1: 'please, help me!',
-  0: '[segfault] access violation addr=0x2022-13',
+  1: 'please, don\'t leave me!',
+  0: '[segfault] access violation',
 }
 
 const FRAME_DURATION = 0.1; // duration of 1 animation frame, in seconds
@@ -430,8 +479,8 @@ const enqueueAiHealthChat = () => {
   entities.push(createText(
     AI_HEALTH_CHAT[ai.hitPoints],
     5000,
-    3*ai.w + 2*CHARSET_SIZE,
-    CAMERA_HEIGHT - 2*CHARSET_SIZE,
+    3*ai.w + CHARSET_SIZE,
+    2*CHARSET_SIZE,
   ));
 }
 
@@ -684,6 +733,8 @@ function updateEntityTimers(entity) {
   if (entity === ai && ai.hitPoints <= 0) {
     entity.ttl = -1;
   }
+
+
 }
 
 function update() {
@@ -814,7 +865,7 @@ function render() {
 // }
 
 function renderCrosshair() {
-  BUFFER_CTX.strokeStyle = hero.attacking ? '#f80' : '#248';
+  BUFFER_CTX.strokeStyle = '#248';
   BUFFER_CTX.lineWidth = 2;
   const width = hero.attacking ? 10 : 12;
   const offset = hero.attacking ? 5 : 6;
@@ -824,52 +875,57 @@ function renderCrosshair() {
 }
 
 function renderAiHealth() {
-  if (ai.hitPoints > 0) {
-    TEXT_CTX.fillStyle = 
-      ai.hitPoints < 3 ? '#e11' :
-      ai.hitPoints < 5 ? '#ee1' :
-      '#1ee';
-    TEXT_CTX.fillRect(CHARSET_SIZE, CAMERA_HEIGHT - 3*ai.h - CHARSET_SIZE, 3*ai.w, 3*ai.h)
-  }
+  const i = Math.max(0, ai.hitPoints);
+  const sprite = ATLAS.AI.health[i];
+  TEXT_CTX.drawImage(
+    tileset,
+    sprite.x, sprite.y, sprite.w, sprite.h,
+    CHARSET_SIZE, CHARSET_SIZE, sprite.w, sprite.h
+  );
 }
 
 function renderEntity(entity, ctx = BUFFER_CTX) {
-  // const sprite = ATLAS[entity.type][entity.action][entity.frame];
-  // // TODO skip draw if image outside of visible canvas
-  // ctx.drawImage(
-  //   tileset,
-  //   sprite.x, sprite.y, sprite.w, sprite.h,
-  //   Math.round(entity.x - viewportOffsetX), Math.round(entity.y - viewportOffsetY), sprite.w, sprite.h
-  // );
-
   ctx.save();
 
   switch (entity.type) {
     case 'hero':
-      ctx.translate(entity.x, entity.y);
+      ctx.translate(Math.round(entity.x), Math.round(entity.y));
       if (entity.gunAngle < 0) {
         // draw gun
         ctx.save();
         ctx.translate(entity.w/2, entity.h/2);
         ctx.rotate(entity.gunAngle);
         ctx.translate(entity.w/4, 0);
-        ctx.fillStyle = '#ee1';
-        ctx.fillRect(0, -2, 10, 4);
+        ctx.drawImage(
+          tileset,
+          ATLAS.hero.gun.x, ATLAS.hero.gun.y, ATLAS.hero.gun.w, ATLAS.hero.gun.h,
+          0, -2, ATLAS.hero.gun.w, ATLAS.hero.gun.h
+        );
         ctx.restore();
         // draw hero
-        ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#1e1';
-        ctx.fillRect(0, 0, entity.w, entity.h);
+        ctx.drawImage(
+          tileset,
+          ATLAS.hero.idle.x, ATLAS.hero.idle.y, ATLAS.hero.idle.w, ATLAS.hero.idle.h,
+          0, 2, ATLAS.hero.idle.w, ATLAS.hero.idle.h
+        );
       } else {
         // draw hero
-        ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#1e1';
-        ctx.fillRect(0, 0, entity.w, entity.h);
+        // ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#1e1';
+        ctx.drawImage(
+          tileset,
+          ATLAS.hero.idle.x, ATLAS.hero.idle.y, ATLAS.hero.idle.w, ATLAS.hero.idle.h,
+          0, 2, ATLAS.hero.idle.w, ATLAS.hero.idle.h
+        );
         // draw gun
         ctx.save();
         ctx.translate(entity.w/2, entity.h/2);
         ctx.rotate(entity.gunAngle);
         ctx.translate(entity.w/4, 0);
-        ctx.fillStyle = '#ee1';
-        ctx.fillRect(0, -2, 10, 4);
+        ctx.drawImage(
+          tileset,
+          ATLAS.hero.gun.x, ATLAS.hero.gun.y, ATLAS.hero.gun.w, ATLAS.hero.gun.h,
+          0, -2, ATLAS.hero.gun.w, ATLAS.hero.gun.h
+        );
         ctx.restore();
       }
       break;
@@ -878,10 +934,14 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       ctx.rotate(entity.angle);
       ctx.translate(2.5*entity.w, 0);
       ctx.rotate(-entity.angle);
-      ctx.fillStyle = '#1ee';
-      ctx.fillRect(-entity.w/2, -entity.h/2, entity.w, entity.h);
+      ctx.drawImage(
+        tileset,
+        ATLAS.AI.sprite.x, ATLAS.AI.sprite.y, ATLAS.AI.sprite.w, ATLAS.AI.sprite.h,
+        -entity.w/2, -entity.h/2, ATLAS.AI.sprite.w, ATLAS.AI.sprite.h
+      );
       break;
     case 'bullet':
+      // TODO remove
       ctx.translate(entity.x, entity.y);
       ctx.rotate(entity.angle + Math.PI/2);
       ctx.fillStyle = '#e1e';
@@ -897,8 +957,12 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       break;
     case 'scout':
     case 'tank':
-      ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#11e';
-      ctx.fillRect(entity.x, entity.y, entity.w, entity.h);
+      const sprite = ATLAS[entity.type]['walk'][0];
+      ctx.drawImage(
+        tileset,
+        sprite.x, sprite.y, sprite.w, sprite.h,
+        Math.round(entity.x), Math.round(entity.y), sprite.w, sprite.h
+      );
       break;
     case 'text':
       renderAnimatedText(entity.text, entity.x, entity.y, entity.startTime, currentTime, entity.align, entity.scale)
@@ -909,11 +973,13 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
 };
 
 function renderBloodSpot(entity) {
-  MAP_CTX.beginPath();
-  MAP_CTX.arc(entity.x+entity.w/2, entity.y+entity.h/2, entity.w/2, 0, 2 * Math.PI);
-  MAP_CTX.fillStyle = '#f80';
-  MAP_CTX.fill();
-  MAP_CTX.closePath();
+  //FIXME find the sprite, but doesn't render anythng
+  const sprite = ATLAS[entity.type].blood;
+  BUFFER_CTX.drawImage(
+    tileset,
+    sprite.x, sprite.y, sprite.w, sprite.h,
+    Math.round(entity.x), Math.round(entity.y), sprite.w, sprite.h
+  );
 }
 
 function renderMap() {
