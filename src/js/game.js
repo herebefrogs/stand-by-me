@@ -74,18 +74,22 @@ const ATLAS = {
     idle: { x: 0, y: 48, w: 16, h: 16 },
     torso_forward: { x: 16, y: 48, w: 16, h: 9 },
     torso_backward: { x: 32, y: 48, w: 16, h: 9},
-    gun: { x: 48, y: 48, w: 11, h: 7 },
-    muzzle_flash: [
-      { x: 64, y: 48, w: 6, h: 9 },
-      { x: 64, y: 48, w: 5, h: 9 },
-      { x: 64, y: 48, w: 3, h: 9 },
-    ],
+    frameIndex1: 0,  // legs
+    frameIndex1Time: 0,
     legs: [
       { x: 16, y: 57, w: 16, h: 7 },
       { x: 32, y: 57, w: 16, h: 7 },
       { x: 48, y: 57, w: 16, h: 7 },
       { x: 64, y: 57, w: 16, h: 7 },
-    ]
+    ],
+    gun: { x: 48, y: 48, w: 11, h: 7 },
+    frameIndex2: 0,  // muzzle flash
+    frameIndex2Time: 0,
+    muzzle_flash: [
+      { x: 64, y: 48, w: 6, h: 8 },
+      { x: 71, y: 48, w: 5, h: 8 },
+      { x: 77, y: 48, w: 3, h: 8 },
+    ],
   },
   AI: {
     angle: 0,
@@ -127,10 +131,14 @@ const ATLAS = {
     w: 16,
     h: 10,
     blood: { x: 32, y: 112, w: 16, h: 10 },
+    frameIndex1: 0,
+    frameIndex1Time: 0,
     bite: [
       { x: 0, y: 38, w: 16, h: 10 },
       { x: 16, y: 38, w: 16, h: 10 },
     ],
+    frameIndex2: 0,
+    frameIndex2Time: 0,
     walk: [
       { x: 32, y: 38, w: 16, h: 10 },
       { x: 48, y: 38, w: 16, h: 10 },
@@ -144,14 +152,18 @@ const ATLAS = {
     w: 32,
     h: 32,
     blood: { x: 48, y: 96, w: 32, h: 32 },
+    frameIndex1: 0,
+    frameIndex1Time: 0,
     bite: [
       { x: 0, y: 0, w: 32, h: 32 },
       { x: 32, y: 0, w: 32, h: 32 },
     ],
+    frameIndex2: 0,
+    frameIndex2Time: 0,
     walk: [
       { x: 64, y: 0, w: 32, h: 32 },
-      { x: 112, y: 0, w: 32, h: 32 },
-      { x: 112, y: 32, w: 32, h: 32 },
+      { x: 96, y: 0, w: 32, h: 32 },
+      { x: 96, y: 32, w: 32, h: 32 },
     ],
   },
   ingress: {
@@ -665,6 +677,8 @@ function handleMeleeAttacks(enemies) {
     enemies.find(foe => {
       // must be alive to do damage
       if (foe.hitPoints > 0 && testAABBCollision(foe, hero).collide) {
+        foe.attacking = true;
+
         // who really takes damage?
         if (invincibleMode && ai.hitPoints > 0) {
           ai.hitPoints -= 1;
@@ -722,19 +736,42 @@ function updateEntityTimers(entity) {
     blast = 0;
   }
 
-  // update animation frame
-  // entity.frameTime += elapsedTime;
-  // if (entity.frameTime > FRAME_DURATION) {
-  //   entity.frameTime -= FRAME_DURATION;
-  //   entity.frame += 1;
-  //   entity.frame %= ATLAS[entity.type][entity.action].length;
-  // }
-
   if (entity === ai && ai.hitPoints <= 0) {
     entity.ttl = -1;
   }
 
+  switch (entity.type) {
+    case 'hero':
+      entity.frameIndex1Time += elapsedTime;
+      entity.frameIndex2Time += elapsedTime;
+      if (entity.frameIndex1Time > FRAME_DURATION) {
+        entity.frameIndex1Time -= FRAME_DURATION;
+        entity.frameIndex1 += 1;
+        entity.frameIndex1 %= ATLAS.hero.legs.length;
+      }
+      if (entity.frameIndex2Time > FRAME_DURATION) {
+        entity.frameIndex2Time -= FRAME_DURATION;
+        entity.frameIndex2 += 1;
+        entity.frameIndex2 %= ATLAS.hero.muzzle_flash.length;
+      }
+      break;
+    case 'scout':
+    case 'tank':
+      entity.frameIndex1Time += elapsedTime;
+      entity.frameIndex2Time += elapsedTime;
+      if (entity.frameIndex1Time > FRAME_DURATION) {
+        entity.frameIndex1Time -= FRAME_DURATION;
+        entity.frameIndex1 += 1;
+        entity.frameIndex1 %= ATLAS.tank.bite.length;
+      }
+      if (entity.frameIndex2Time > FRAME_DURATION) {
+        entity.frameIndex2Time -= FRAME_DURATION;
+        entity.frameIndex2 += 1;
+        entity.frameIndex2 %= ATLAS.tank.walk.length;
+      }
+      break;
 
+  }
 }
 
 function update() {
@@ -884,6 +921,51 @@ function renderAiHealth() {
   );
 }
 
+function renderGun() {
+  BUFFER_CTX.save();
+  BUFFER_CTX.translate(hero.w/2, hero.h/2);
+  BUFFER_CTX.rotate(hero.gunAngle);
+  BUFFER_CTX.translate(hero.w/4, 0);
+  BUFFER_CTX.drawImage(
+    tileset,
+    ATLAS.hero.gun.x, ATLAS.hero.gun.y, ATLAS.hero.gun.w, ATLAS.hero.gun.h,
+    0, -2, ATLAS.hero.gun.w, ATLAS.hero.gun.h
+  );
+  BUFFER_CTX.translate(ATLAS.hero.gun.w, 2);
+  if (hero.attacking) {
+    const sprite = ATLAS.hero.muzzle_flash[hero.frameIndex2];
+    BUFFER_CTX.drawImage(
+      tileset,
+      sprite.x, sprite.y, sprite.w, sprite.h,
+      -1, -ATLAS.hero.gun.h, sprite.w, sprite.h
+    );
+  }
+  BUFFER_CTX.restore();
+}
+
+function renderHero() {
+  if (hero.velX || hero.velY) {
+    const torso = ATLAS.hero.torso_forward;
+    BUFFER_CTX.drawImage(
+      tileset,
+      torso.x, torso.y, torso.w, torso.h,
+      0, 0, torso.w, torso.h
+    );
+    const legs = ATLAS.hero.legs[hero.frameIndex1];
+    BUFFER_CTX.drawImage(
+      tileset,
+      legs.x, legs.y, legs.w, legs.h,
+      0, torso.h, legs.w, legs.h
+    );
+  } else {
+    BUFFER_CTX.drawImage(
+      tileset,
+      ATLAS.hero.idle.x, ATLAS.hero.idle.y, ATLAS.hero.idle.w, ATLAS.hero.idle.h,
+      0, 0, ATLAS.hero.idle.w, ATLAS.hero.idle.h
+    );
+  }
+}
+
 function renderEntity(entity, ctx = BUFFER_CTX) {
   ctx.save();
 
@@ -891,42 +973,11 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
     case 'hero':
       ctx.translate(Math.round(entity.x), Math.round(entity.y));
       if (entity.gunAngle < 0) {
-        // draw gun
-        ctx.save();
-        ctx.translate(entity.w/2, entity.h/2);
-        ctx.rotate(entity.gunAngle);
-        ctx.translate(entity.w/4, 0);
-        ctx.drawImage(
-          tileset,
-          ATLAS.hero.gun.x, ATLAS.hero.gun.y, ATLAS.hero.gun.w, ATLAS.hero.gun.h,
-          0, -2, ATLAS.hero.gun.w, ATLAS.hero.gun.h
-        );
-        ctx.restore();
-        // draw hero
-        ctx.drawImage(
-          tileset,
-          ATLAS.hero.idle.x, ATLAS.hero.idle.y, ATLAS.hero.idle.w, ATLAS.hero.idle.h,
-          0, 2, ATLAS.hero.idle.w, ATLAS.hero.idle.h
-        );
+        renderGun()
+        renderHero();
       } else {
-        // draw hero
-        // ctx.fillStyle = !entity.hitPoints ? '#e11' : entity.invincible ? '#ee1' : '#1e1';
-        ctx.drawImage(
-          tileset,
-          ATLAS.hero.idle.x, ATLAS.hero.idle.y, ATLAS.hero.idle.w, ATLAS.hero.idle.h,
-          0, 2, ATLAS.hero.idle.w, ATLAS.hero.idle.h
-        );
-        // draw gun
-        ctx.save();
-        ctx.translate(entity.w/2, entity.h/2);
-        ctx.rotate(entity.gunAngle);
-        ctx.translate(entity.w/4, 0);
-        ctx.drawImage(
-          tileset,
-          ATLAS.hero.gun.x, ATLAS.hero.gun.y, ATLAS.hero.gun.w, ATLAS.hero.gun.h,
-          0, -2, ATLAS.hero.gun.w, ATLAS.hero.gun.h
-        );
-        ctx.restore();
+        renderHero();
+        renderGun()
       }
       break;
     case 'AI':
@@ -957,7 +1008,7 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       break;
     case 'scout':
     case 'tank':
-      const sprite = ATLAS[entity.type]['walk'][0];
+      const sprite = ATLAS[entity.type][entity.attacking ? 'bite' : 'walk'][entity.attacking ? entity.frameIndex1 : entity.frameIndex2];
       ctx.drawImage(
         tileset,
         sprite.x, sprite.y, sprite.w, sprite.h,
