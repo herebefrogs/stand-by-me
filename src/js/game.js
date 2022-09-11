@@ -130,6 +130,7 @@ const ATLAS = {
     speed: 110,
     w: 16,
     h: 10,
+    hit: { x: 128, y: 38, w: 16, h: 10 },
     blood: { x: 32, y: 112, w: 16, h: 10 },
     frameIndex1: 0,
     frameIndex1Time: 0,
@@ -151,6 +152,7 @@ const ATLAS = {
     speed: 45,
     w: 32,
     h: 32,
+    hit: { x: 128, y: 0, w: 32, h: 32 },
     blood: { x: 48, y: 96, w: 32, h: 32 },
     frameIndex1: 0,
     frameIndex1Time: 0,
@@ -621,14 +623,18 @@ function updateEntityPosition(entity) {
 }
 
 function handleEnemyVelocity(entity) {
-  const entityCenterX = entity.x+entity.w/2;
-  const entityCenterY = entity.y+entity.h/2;
-
-  // TODO decide whether aiming for the central core or the player
-  const heroCenterX = hero.x+hero.w/2;
-  const heroCenterY = hero.y+hero.h/2;
-
-  [entity.velX, entity.velY, _] = velocityForTarget(entityCenterX, entityCenterY, heroCenterX, heroCenterY);
+  if (entity.hitPoints > 0) {
+    const entityCenterX = entity.x+entity.w/2;
+    const entityCenterY = entity.y+entity.h/2;
+  
+    // TODO decide whether aiming for the central core or the player
+    const heroCenterX = hero.x+hero.w/2;
+    const heroCenterY = hero.y+hero.h/2;
+  
+    [entity.velX, entity.velY, _] = velocityForTarget(entityCenterX, entityCenterY, heroCenterX, heroCenterY);
+  } else {
+    entity.velX = entity.velY = 0;
+  }
 }
 
 function handleMissileAttacks(bullets, enemies) {
@@ -785,6 +791,7 @@ function update() {
       if (anyKeyDown() || isPointerUp()) {
         startGame();
       }
+      break;
     case GAME_SCREEN:
       if (stopTime < currentTime) {
         if (hero.ded) {
@@ -1044,7 +1051,9 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       break;
     case 'scout':
     case 'tank':
-      const sprite = ATLAS[entity.type][entity.attacking ? 'bite' : 'walk'][entity.attacking ? entity.frameIndex1 : entity.frameIndex2];
+      const sprite = entity.hitPoints > 0 ?
+        ATLAS[entity.type][entity.attacking ? 'bite' : 'walk'][entity.attacking ? entity.frameIndex1 : entity.frameIndex2] :
+        ATLAS[entity.type].hit
       ctx.drawImage(
         tileset,
         sprite.x, sprite.y, sprite.w, sprite.h,
