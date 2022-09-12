@@ -101,7 +101,7 @@ Game plan
   # left side sprite/animations
   # sprite for hit
 - nice to have
-  - central Core
+  # central Core
     - most enemies go there
     - hit points and loose condition is destroyed
   # blood splash layer
@@ -114,12 +114,6 @@ Game plan
 - if time run short
   - infinite waves, no way to win the game
       lay of ancient rome quote on end screen
-
-
-center player next  to central core
-moar ingress
-happy AI sprite on intro screen
-
 
 
 

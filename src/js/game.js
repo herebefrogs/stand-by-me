@@ -48,8 +48,8 @@ let cameraY = 0;
 const CAMERA_WIDTH = 240;               // camera/viewport size
 const CAMERA_HEIGHT = 180;
 // camera-window & edge-snapping settings
-const CAMERA_WINDOW_X = 50;
-const CAMERA_WINDOW_Y = 20;
+const CAMERA_WINDOW_X = 96;
+const CAMERA_WINDOW_Y = 64;
 const CAMERA_WINDOW_WIDTH = CAMERA_WIDTH - 2*CAMERA_WINDOW_X;
 const CAMERA_WINDOW_HEIGHT = CAMERA_HEIGHT - 2*CAMERA_WINDOW_Y;
 
@@ -307,8 +307,9 @@ function startGame() {
   setRandSeed('js13k2022');
   // if (isMonetizationEnabled()) { unlockExtraContent() }
   konamiIndex = 0;
-  cameraX = cameraY = 0;
-  hero = createEntity('hero', CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+  cameraX = 160
+  cameraY = 116;
+  hero = createEntity('hero', 256, 208);
   ai = { type: 'AI', ...ATLAS['AI'] }
   // TODO have a toggle on title screen that only Coil members can switch
   invincibleMode = true;
@@ -990,7 +991,7 @@ function render() {
     case INTRO_SCREEN:
       BUFFER_CTX.fillStyle = COLOR_LIGHT_BEIGE;
       BUFFER_CTX.fillRect(0, 0, BUFFER.width, BUFFER.height);
-      sprite = ATLAS.AI.health[10];
+      sprite = ATLAS.AI.health[9];
       TEXT_CTX.drawImage(
         tileset,
         sprite.x, sprite.y, sprite.w, sprite.h,
