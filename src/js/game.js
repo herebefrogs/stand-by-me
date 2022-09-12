@@ -183,8 +183,58 @@ const ATLAS = {
     },
     rate: 1, // foe per second
     spawnTime: 0,
+  },
+  tiles: {
+    0: { x: 0, y: 112 },
+    1: { x: 0, y: 64 },
+    2: { x: 16, y: 64 },
+    3: { x: 32, y: 64 },
+    4: { x: 0, y: 80 },
+    5: { x: 16, y: 80 },
+    6: { x: 32, y: 80 },
+    7: { x: 0, y: 96 },
+    8: { x: 16, y: 96 },
+    9: { x: 32, y: 96 },
+    0xb: { x: 128, y: 96 },
+    0xc: { x: 144, y: 96 },
+    0xd: { x: 128, y: 112 },
+    0xe: { x: 144, y: 112 },
   }
 };
+
+const level =
+"B88888888888888888888888888888888888888C\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000122230000000000000000000004\
+6000000000000455560000000000000000000004\
+600000000000045B890000000000000000000004\
+6000000000000789000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+6000000000000000000000000000000000000004\
+D22222222222222222222222222222222222222E";
+
+let walls;
 
 const AI_HEALTH_CHAT = {
   9: 's.h.e.i.l.d. protocol activated!',
@@ -242,10 +292,11 @@ function startGame() {
   entities = [
     hero,
     ai,
-    { type: 'ingress', x: 0, y: CAMERA_HEIGHT / 2, ...ATLAS['ingress'] },
+    // { type: 'ingress', x: 0, y: CAMERA_HEIGHT / 2, ...ATLAS['ingress'] },
   ];
   stopTime = 0;
-  renderMap();
+  walls = loadMap();
+  // DO NOT COMMIT ME
   playSong();
   setScreen(GAME_SCREEN);
 };
@@ -1098,17 +1149,38 @@ function renderBloodSpot(entity) {
   );
 }
 
-function renderMap() {
+function loadMap() {
   MAP_CTX.fillStyle = COLOR_LIGHT_BEIGE;
   MAP_CTX.fillRect(0, 0, MAP.width, MAP.height);
 
-  // MAP_CTX.fillStyle ='#777';
-  // [0, 2, 4, 6, 8, 10].forEach(x => {
-  //   [0, 2, 4, 6, 8, 10].forEach(y => {
-  //     MAP_CTX.fillRect(x*64, y*48, 64, 48);
-  //     MAP_CTX.fillRect((x+1)*64, (y+1)*48, 64, 48);
-  //   })
-  // })
+  let u, v;
+  let walls = [];
+
+  level.split("").forEach((tile, n) => {
+    u = n % (MAP.width/16);
+    v = Math.floor(n/(MAP.width/16));
+
+    tile = parseInt(tile, 16)
+    if ([1,2,3,4,5,6,7,8,9,0xb,0xc,0xd,0xe].includes(tile)) {
+      // add a collision wall
+      const wall = {
+        x: 16*u,
+        y: 16*v,
+        w: 16,
+        h: 16
+      };
+      walls.push(wall);
+
+      // draw wall tile
+      MAP_CTX.drawImage(
+        tileset,
+        ATLAS.tiles[tile].x, ATLAS.tiles[tile].y, 16, 16,
+        wall.x, wall.y, 16, 16
+      );
+    }
+  })
+
+  return walls;
 };
 
 // LOOP HANDLERS
@@ -1146,7 +1218,8 @@ onload = async (e) => {
   await initCharset();
   tileset = await loadImg(TILESET);
   flipped_tileset = await loadImg(FLIPPED_TILESET);
-  loadSongs();
+  // DO NOT COMMIT ME
+  // loadSongs();
 
   toggleLoop(true);
 };
