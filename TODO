@@ -91,9 +91,9 @@ Stand by me features:
 
 Game plan
 - need level
-  - collision with bullets/enemies/hero (remove constrain)
+  # collision with bullets/enemies/hero (remove constrain)
   - ingress waves
-  - floor plan
+  # floor plan
 # title/intro/end screens
 # need sprites (looks like shit otherwise)
   # rough static
@@ -115,6 +115,11 @@ Game plan
   - infinite waves, no way to win the game
       lay of ancient rome quote on end screen
 
+
+clear ingress sprite background
+center player next  to central core
+moar ingress
+happy AI sprite on intro screen
 
 
 

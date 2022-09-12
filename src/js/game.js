@@ -178,7 +178,7 @@ const ATLAS = {
   },
   ingresses: [
     {
-      name: 'NW',
+      name: 'nw',
       x: 32,
       y: 48,
       odds: {
@@ -187,8 +187,21 @@ const ATLAS = {
       },
       rate: 1000, // foe per second
       spawnTime: 0,
-      openTime: 5000,      
+      openTime: 5000,
       closeTime: 35000,
+    },
+    {
+      name: 's',
+      x: 272,
+      y: 432,
+      odds: {
+        tank: 0, // %
+        scout: 1 // %
+      },
+      rate: 750, // foe per second
+      spawnTime: 0,
+      openTime: 35000,
+      closeTime: 65000,
     },
   ],
   tiles: {
@@ -540,10 +553,7 @@ const enqueueAiHealthChat = () => {
   entities = entities.filter(e => e.type !== 'text');
 
   entities.push(createText(
-    AI_HEALTH_CHAT[ai.hitPoints],
-    5000,
-    4*ai.w + CHARSET_SIZE,
-    2*CHARSET_SIZE,
+    AI_HEALTH_CHAT[ai.hitPoints]
   ));
 }
 
@@ -556,15 +566,13 @@ const createIngress = (ingress) => (
   }
 );
 
-const createText = (text, duration, x, y, align, scale) => ({
-  align,
-  scale,
+const createText = (text, x, y) => ({
   startTime: currentTime,
   text,
-  ttl: currentTime + duration,
+  ttl: currentTime + 5000,
   type: 'text',
-  x,
-  y
+  x: 4*ai.w + CHARSET_SIZE,
+  y: 2*CHARSET_SIZE
 })
 
 function createEntity(type, x = 0, y = 0) {
@@ -869,7 +877,12 @@ function updateEntityTimers(entity) {
         entity.frameIndex2 %= ATLAS.tank.walk.length;
       }
       break;
-
+    case 'ingress':
+      if (!entity.announced && isIngressOpen(entity)) {
+        entity.announced = true;
+        entities.push(createText('breach in sector ' + entity.name));
+      }
+      break;
   }
 }
 
@@ -1158,13 +1171,13 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       renderAnimatedText(entity.text, entity.x, entity.y, entity.startTime, currentTime, entity.align, entity.scale)
       break;
     case 'ingress': {
-      if (isIngressOpen(entity)) {        
+      if (isIngressOpen(entity)) {
         ctx.drawImage(
           tileset,
-          80, 32e, 16, 16,
+          80, 32, 16, 16,
           entity.x, entity.y, 16, 16
-        );     
-      } 
+        );
+      }
     }
   }
 
