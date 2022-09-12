@@ -176,14 +176,21 @@ const ATLAS = {
       { x: 96, y: 32, w: 32, h: 32 },
     ],
   },
-  ingress: {
-    odds: {
-      tank: 0.15, // %
-      scout: 0.85 // %
+  ingresses: [
+    {
+      name: 'NW',
+      x: 32,
+      y: 48,
+      odds: {
+        tank: 0, // %
+        scout: 1 // %
+      },
+      rate: 1000, // foe per second
+      spawnTime: 0,
+      openTime: 5000,      
+      closeTime: 35000,
     },
-    rate: 100, // foe per second
-    spawnTime: 0,
-  },
+  ],
   tiles: {
     // walls
     0: { x: 0, y: 112 },
@@ -295,9 +302,9 @@ function startGame() {
   crosshair = { x: 0, y: 0 };
   blast = 0;
   entities = [
+    ...ATLAS.ingresses.map(createIngress),
     hero,
     ai,
-    { type: 'ingress', x: 32, y: 48, ...ATLAS['ingress'] },
   ];
   stopTime = 0;
   walls = loadMap();
@@ -540,6 +547,15 @@ const enqueueAiHealthChat = () => {
   ));
 }
 
+const createIngress = (ingress) => (
+  {
+    type: 'ingress',
+    ...ingress,
+    openTime: ingress.openTime + currentTime,
+    closeTime: ingress.closeTime + currentTime
+  }
+);
+
 const createText = (text, duration, x, y, align, scale) => ({
   align,
   scale,
@@ -633,8 +649,10 @@ function handleHeroAttack() {
   }
 }
 
+const isIngressOpen = (ingress) => (ingress.openTime <= currentTime) && (currentTime <= ingress.closeTime);
+
 function spawnEnemy(ingress) {
-  if (ingress.spawnTime < currentTime) {
+  if (isIngressOpen(ingress) && (ingress.spawnTime < currentTime)) {
     // guarantee an enemy is always spawned
     let cumulativeOdd = 0;
 
@@ -1139,6 +1157,15 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       TEXT_CTX.fillRect(3*ai.w + CHARSET_SIZE, CHARSET_SIZE, CAMERA_WIDTH - (3*ai.w + 2*CHARSET_SIZE), 3*CHARSET_SIZE)
       renderAnimatedText(entity.text, entity.x, entity.y, entity.startTime, currentTime, entity.align, entity.scale)
       break;
+    case 'ingress': {
+      if (isIngressOpen(entity)) {        
+        ctx.drawImage(
+          tileset,
+          80, 32e, 16, 16,
+          entity.x, entity.y, 16, 16
+        );     
+      } 
+    }
   }
 
   ctx.restore();
