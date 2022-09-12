@@ -202,9 +202,13 @@ const ATLAS = {
   }
 };
 
+
+
+
+
 const level =
-"B88888888888888888888888888888888888888C\
-6000000000000000000000000000000000000004\
+"5555555555555555555555555555555555555555\
+B88888888888888888888888888888888888888C\
 6000000000000000000000000000000000000004\
 6000000000000000000000000000000000000004\
 6000000000000000000000000000000000000004\
@@ -1154,7 +1158,13 @@ function loadMap() {
   MAP_CTX.fillRect(0, 0, MAP.width, MAP.height);
 
   let u, v;
-  let walls = [];
+  // surround the level with a thick wall
+  let walls = [
+    { x: -32, y: -32, w: 32+MAP.width+32, h: 64},           // top
+    { x: -32, y: MAP.height-16, w: 32+MAP.width+32, h: 48}, // bottom
+    { x: -32, y: -32, w: 48, h: 32+MAP.height+32},          // left
+    { x: MAP.width-16, y: -32, w: 48, h: 32+MAP.height+32}, // right
+  ];
 
   level.split("").forEach((tile, n) => {
     u = n % (MAP.width/16);
@@ -1169,7 +1179,6 @@ function loadMap() {
         w: 16,
         h: 16
       };
-      walls.push(wall);
 
       // draw wall tile
       MAP_CTX.drawImage(
@@ -1177,6 +1186,13 @@ function loadMap() {
         ATLAS.tiles[tile].x, ATLAS.tiles[tile].y, 16, 16,
         wall.x, wall.y, 16, 16
       );
+
+      // add internal walls, external were already covered above
+      if (((u !== 0) && (u !== (MAP.width/16 -1))) ||
+          ((v !== 0) && (v !== (MAP.height/16 -1)))) {
+        walls.push(wall);
+      }
+
     }
   })
 
