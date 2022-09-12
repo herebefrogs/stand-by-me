@@ -3,31 +3,31 @@ Stand by me features:
 - hero firing
   # gun firing
   # gun orientation
-  - gun sprite
-    - still
-    - firing
+  # gun sprite
+    # still
+    # firing
   - gun sound
   # bullet creation / motion
   # bullet collision / removal
   - bullet collision sound
   - bullet sprite
-- hero rendering
-  - sprites
-    - still
-    - moving 
-  - orientation (facing same as gun, not facing motion)
-  - animation (play forward if gun orientation same as motion, play backward if opposite)
+# hero rendering
+  # sprites
+    # still
+    # moving 
+  # orientation (facing same as gun, not facing motion)
+  # animation (play forward if gun orientation same as motion, play backward if opposite)
 - enemy
   - spawn by waves (tied to level design?)
   # navigation (hero)
   - navigation (central core)
   # attack
   # death
-  - sprites
-    - moving
-    - attacking
-    - dying / dead (green blood for germans)
-  - animation
+  # sprites
+    # moving
+    # attacking
+    # dying / dead (green blood for germans)
+  # animation
   - sound
     - attack
     - dying
@@ -39,11 +39,11 @@ Stand by me features:
   - sound
 - level
   - central core
-  - walls
+  # walls
   - sprites
     - central core
-    - walls
-    - ground
+    # walls
+    # ground
   - level design (and format)
 - UI
   - AI portrait sprite
@@ -61,25 +61,25 @@ Stand by me features:
     - wave information  (infestation detected east/north/... zone 1/2...)
     - kill cheer (yeah!)
     # AI/hero health status (outch that one hurt! I/you don't feel/look so good... what's happening to me/you? I don't want [you] to die!)
-    - lays of ancient rome quote (how can one die better than facing fearful odds?... title screen or dialog?)
+    # lays of ancient rome quote (how can one die better than facing fearful odds?... title screen or dialog?)
   - central core health
 - loose/win condition
     central core destroyed
     AI dead?
     # player dead (coil mode)
-- title screen
-  - stand by me
-  - start
+# title screen
+  # stand by me
+  # start
   - mortal mode toggle (enabled if coil is active)
-  - minimal instructions?
-  - jerome lecomte @ js13kgames 2022 / proudly made in canada
+  # minimal instructions?
+  # jerome lecomte @ js13kgames 2022 / proudly made in canada
 - end screen
   - score? nb kills + central core health?
   - hiscore?
-  - Twitter share (image would be great)
-  - main menu
+  # Twitter share (image would be great)
+  # main menu
 - screenshake / stop time when hit
-- music
+# music
 - other weapons?
 - description and screenshots
 

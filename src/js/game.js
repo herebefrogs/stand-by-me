@@ -292,11 +292,10 @@ function startGame() {
   entities = [
     hero,
     ai,
-    // { type: 'ingress', x: 0, y: CAMERA_HEIGHT / 2, ...ATLAS['ingress'] },
+    { type: 'ingress', x: 16, y: CAMERA_HEIGHT / 2, ...ATLAS['ingress'] },
   ];
   stopTime = 0;
   walls = loadMap();
-  // DO NOT COMMIT ME
   playSong();
   setScreen(GAME_SCREEN);
 };
@@ -408,8 +407,8 @@ function correct2EntitiesCollision(entity1, entity2, test) {
   }
 };
 
-// entity1 collided into entity2
-function correctAABBCollision(entity1, entity2, test) {
+// entity1 collided into entity2, entity1 will move, entity2 stay put
+function correctEntityToWallCollision(entity1, entity2, test) {
   const { entity1MaxX, entity1MaxY, entity2MaxX, entity2MaxY } = test;
 
   const deltaMaxX = entity1MaxX - entity2.x;
@@ -475,19 +474,6 @@ function correctAABBCollision(entity1, entity2, test) {
   // entity1 moving up
   else if (entity1.velY < 0) {
     entity1.y += deltaMinY;
-  }
-};
-
-function constrainToViewport(entity) {
-  if (entity.x < 0) {
-    entity.x = 0;
-  } else if (entity.x > MAP.width - entity.w) {
-    entity.x = MAP.width - entity.w;
-  }
-  if (entity.y < 0) {
-    entity.y = 0;
-  } else if (entity.y > MAP.height - entity.h) {
-    entity.y = MAP.height - entity.h;
   }
 };
 
@@ -770,6 +756,33 @@ function handleMeleeAttacks(enemies) {
   }
 }
 
+function handleHeroAndEnemiesCollision(colliders) {
+  colliders.forEach((entity1, i) => {
+    colliders.slice(i+1).forEach(entity2 => {
+      const test = testAABBCollision(entity1, entity2);
+      if (test.collide) {
+        correct2EntitiesCollision(entity1, entity2, test);
+      }
+    })
+  })
+}
+
+function handleWallsCollision(colliders) {
+  colliders.forEach(entity => {
+    walls.forEach(wall => {
+      const test = testAABBCollision(entity, wall);
+      if (test.collide) {
+        correctEntityToWallCollision(entity, wall, test);
+
+        if (entity.type === 'bullet') {
+          // bullet is spent
+          entity.ttl = -1;
+        }
+      }
+    })
+  })
+}
+
 function updateEntityTimers(entity) {
   if (entity.invincibleEndTime < currentTime) {
     entity.invincible = false;
@@ -875,21 +888,8 @@ function update() {
         handleMeleeAttacks(enemies);
         
         // position overlap detection
-        const colliders = [...enemies, hero];
-        colliders.forEach((entity1, i) => {
-          colliders.slice(i+1).forEach(entity2 => {
-            const test = testAABBCollision(entity1, entity2);
-            // TODO damn, foes don't collide with each other because they're in the same group!!!
-            // must rethink groups
-            if (test.collide) {
-              correct2EntitiesCollision(entity1, entity2, test);
-  
-            }
-          })
-        })
-        // TODO bullets, hero, enemies against level
-        // will make constrainToViewport obsolete
-        constrainToViewport(hero);
+        handleHeroAndEnemiesCollision([...enemies, hero]);
+        handleWallsCollision([...bullets, ...enemies, hero]);
   
         entities.forEach(updateEntityTimers);
         updateCameraWindow();
@@ -1218,8 +1218,7 @@ onload = async (e) => {
   await initCharset();
   tileset = await loadImg(TILESET);
   flipped_tileset = await loadImg(FLIPPED_TILESET);
-  // DO NOT COMMIT ME
-  // loadSongs();
+  loadSongs();
 
   toggleLoop(true);
 };
