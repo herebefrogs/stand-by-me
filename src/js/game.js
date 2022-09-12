@@ -221,7 +221,7 @@ const ATLAS = {
     0xd: { x: 128, y: 112 },
     0xe: { x: 144, y: 112 },
     // central core
-    0xa: { x: 48, y: 64 },
+    0xa: { x: 48, y: 69 },
     // ingress (closed)
     0xf: { x: 80, y: 48 }
   }
@@ -1239,15 +1239,15 @@ function loadMap() {
     if (tile === 0xa) {
       MAP_CTX.drawImage(
         tileset,
-        ATLAS.tiles[tile].x, ATLAS.tiles[tile].y, 32, 32,
-        16*u, 16*v, 32, 32
+        ATLAS.tiles[tile].x, ATLAS.tiles[tile].y, 32, 27,
+        16*u, 16*v, 32, 27
       );
 
       walls.push({
         x: 16*u,
         y: 16*v,
         w: 32,
-        h: 32
+        h: 27
       });
     }
     // ingress
