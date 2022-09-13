@@ -124,8 +124,8 @@ const ATLAS = {
     damage: 1,
     speed: 400,
     ttl: Infinity,
-    w: 1,
-    h: 10
+    w: 10,
+    h: 1
   },
   blast: {
     speed: 400,
@@ -983,11 +983,11 @@ function handleWallsCollision(colliders) {
     walls.forEach(wall => {
       const test = testAABBCollision(entity, wall);
       if (test.collide) {
-        correctEntityToWallCollision(entity, wall, test);
-
         if (entity.type === 'bullet') {
           // bullet is spent
           entity.ttl = -1;
+        } else {
+          correctEntityToWallCollision(entity, wall, test);
         }
       }
     })
@@ -1319,11 +1319,10 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
       );
       break;
     case 'bullet':
-      // TODO remove
       ctx.translate(entity.x, entity.y);
       ctx.rotate(entity.angle + Math.PI/2);
       ctx.fillStyle = COLOR_OFF_PALETTE_PURPLE;
-      ctx.fillRect(0, 0, entity.w, entity.h);
+      ctx.fillRect(0, 0, entity.h, entity.w);
       break;
     case 'blast':
       ctx.beginPath();
