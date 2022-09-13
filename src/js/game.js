@@ -178,7 +178,7 @@ const ATLAS = {
   },
   ingresses: [
     {
-      name: 'nw',
+      name: 1,
       x: 32,
       y: 48,
       odds: {
@@ -186,12 +186,11 @@ const ATLAS = {
         scout: 1 // %
       },
       rate: 1000, // foe per second
-      spawnTime: 0,
       openTime: 5000,
-      closeTime: 35000,
+      closeTime: 15000,
     },
     {
-      name: 's',
+      name: 6,
       x: 272,
       y: 432,
       odds: {
@@ -199,9 +198,188 @@ const ATLAS = {
         scout: 1 // %
       },
       rate: 750, // foe per second
-      spawnTime: 0,
-      openTime: 35000,
-      closeTime: 65000,
+      openTime: 17500,
+      closeTime: 27500,
+    },
+    {
+      name: 3,
+      x: 560,
+      y: 48,
+      odds: {
+        tank: 0.1, // %
+        scout: 0.9 // %
+      },
+      rate: 750, // foe per second
+      openTime: 30000,
+      closeTime: 40000,
+    },
+    {
+      name: 7,
+      x: 48,
+      y: 432,
+      odds: {
+        tank: 0.9, // %
+        scout: 0.1 // %
+      },
+      rate: 1250, // foe per second
+      openTime: 42500,
+      closeTime: 55000,
+    },
+    {
+      name: 4,
+      x: 576,
+      y: 160,
+      odds: {
+        tank: 0.15, // %
+        scout: 0.85 // %
+      },
+      rate: 1000, // foe per second
+      openTime: 42500,
+      closeTime: 55000,
+    },
+    {
+      name: 2,
+      x: 368,
+      y: 48,
+      odds: {
+        tank: 0.15, // %
+        scout: 0.85 // %
+      },
+      rate: 900, // foe per second
+      openTime: 50000,
+      closeTime: 62500,
+    },
+    {
+      name: 5,
+      x: 592,
+      y: 432,
+      odds: {
+        tank: 0.8, // %
+        scout: 0.2 // %
+      },
+      rate: 900, // foe per second
+      openTime: 57500,
+      closeTime: 70000,
+    },
+    {
+      name: 8,
+      x: 32,
+      y: 256,
+      odds: {
+        tank: 0.25, // %
+        scout: 0.75 // %
+      },
+      rate: 800, // foe per second
+      openTime: 57500,
+      closeTime: 70000,
+    },
+    {
+      name: 2,
+      x: 368,
+      y: 48,
+      odds: {
+        tank: 0.15, // %
+        scout: 0.85 // %
+      },
+      rate: 700, // foe per second
+      openTime: 67500,
+      closeTime: 80000,
+    },
+    {
+      name: 3,
+      x: 560,
+      y: 48,
+      odds: {
+        tank: 0.1, // %
+        scout: 0.9 // %
+      },
+      rate: 650, // foe per second
+      openTime: 75000,
+      closeTime: 100000,
+    },
+    {
+      name: 7,
+      x: 48,
+      y: 432,
+      odds: {
+        tank: 0.9, // %
+        scout: 0.1 // %
+      },
+      rate: 800, // foe per second
+      openTime: 90000,
+      closeTime: 115000,
+    },
+    {
+      name: 5,
+      x: 592,
+      y: 432,
+      odds: {
+        tank: 0.25, // %
+        scout: 0.75 // %
+      },
+      rate: 500, // foe per second
+      openTime: 95000,
+      closeTime: 130000,
+    },
+    {
+      name: 1,
+      x: 32,
+      y: 48,
+      odds: {
+        tank: 0, // %
+        scout: 1 // %
+      },
+      rate: 400, // foe per second
+      openTime: 120000,
+      closeTime: 150000,
+    },
+    {
+      name: 4,
+      x: 576,
+      y: 160,
+      odds: {
+        tank: 0.15, // %
+        scout: 0.85 // %
+      },
+      rate: 300, // foe per second
+      openTime: 130000,
+      closeTime: 180000,
+    },
+    {
+      name: 6,
+      x: 272,
+      y: 432,
+      odds: {
+        tank: 0.1, // %
+        scout: 0.9 // %
+      },
+      rate: 200, // foe per second
+      openTime: 140000,
+      closeTime: 210000,
+    },
+    {
+      name: 3,
+      x: 560,
+      y: 48,
+      odds: {
+        tank: 0.1, // %
+        scout: 0.9 // %
+      },
+      rate: 100, // foe per second
+      openTime: 150000,
+      closeTime: 240000,
+    },
+    {
+      name: 8,
+      x: 32,
+      y: 256,
+      odds: {
+        tank: 0.25, // %
+        scout: 0.75 // %
+      },
+      rate: 50, // foe per second
+      openTime: 160000,
+      closeTime: 300000,
     },
   ],
   tiles: {
@@ -562,6 +740,7 @@ const createIngress = (ingress) => (
   {
     type: 'ingress',
     ...ingress,
+    spawnTime: 0,
     openTime: ingress.openTime + currentTime,
     closeTime: ingress.closeTime + currentTime
   }
