@@ -39,7 +39,7 @@ let invincibleMode;
 let speak;
 
 const FOE_TYPES = ['scout', 'tank'];
-const INVINCIBLE_DURATION = 250; // in millisecond, time during which a hit entity is immune to further damage
+const INVINCIBLE_DURATION = 150; // in millisecond, time during which a hit entity is immune to further damage
 
 // RENDER VARIABLES
 
@@ -1157,9 +1157,9 @@ function renderEntity(entity, ctx = BUFFER_CTX) {
     case 'scout':
     case 'tank':
       const sheet = entity.movingRight ? tileset : flipped_tileset;
-      const sprite = entity.hitPoints > 0 ?
-        ATLAS[entity.type][entity.attacking ? 'bite' : 'walk'][entity.attacking ? entity.frameIndex1 : entity.frameIndex2] :
-        ATLAS[entity.type].hit
+      const sprite = (entity.invincible || (entity.hitPoints <= 0))
+        ? ATLAS[entity.type].hit
+        : ATLAS[entity.type][entity.attacking ? 'bite' : 'walk'][entity.attacking ? entity.frameIndex1 : entity.frameIndex2]
       ctx.drawImage(
         sheet,
         sprite.x, sprite.y, sprite.w, sprite.h,
