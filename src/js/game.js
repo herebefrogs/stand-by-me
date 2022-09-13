@@ -1120,7 +1120,7 @@ function update() {
         // TODO can I share an image of the game?
         share({
           title: document.title,
-          text: 'I died facing fearful odds playing Stand By Me made by @herebefrogs for #js13k 2022',
+          text: 'I died facing fearful odds while playing Stand By Me, made by @herebefrogs for #js13k 2022',
           url: 'https://bit.ly/3eBOQS6'
         });
       }
